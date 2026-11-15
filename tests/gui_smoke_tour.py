@@ -1,4 +1,4 @@
-"""Rundgang: beide Touren Schritt für Schritt durchlaufen, Screenshots ablegen, Sprache per ETS2_LANG."""
+"""Tour: run both tours step by step, save screenshots, language via ETS2_LANG."""
 import os, sys, shutil, tempfile, pathlib
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 src, shots = sys.argv[1], sys.argv[2]

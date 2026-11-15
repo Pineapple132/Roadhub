@@ -1,7 +1,7 @@
-"""Sprachumschaltung. Die Texte im Programm sind deutsch; für andere Sprachen gibt es einen Katalog
-(i18n_*.py): deutscher Text → Übersetzung. Dynamische Texte stehen mit {} als Platzhalter im Katalog
-(z. B. "Bus #{} warten?"). Übersetzt wird an einer Stelle: beim Setzen von Texten in tkinter-Widgets,
-Dialogen und Tabellen. Was nicht im Katalog steht, bleibt deutsch."""
+"""Language switching. The texts in the program are German (they are the catalog keys); for other languages there is a catalog
+(i18n_*.py): German text → translation. Dynamic texts are in the catalog with {} as placeholders
+(e.g. "Bus #{} warten?"). Translation happens in one place: when texts are set in tkinter widgets,
+dialogs and tables. Whatever is not in the catalog stays German."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import re
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-# Reihenfolge der Spalten im Katalog (nach Deutsch)
+# order of the columns in the catalog (after German)
 LANGUAGES = [("de", "Deutsch"), ("en", "English"), ("ru", "Русский"), ("tr", "Türkçe"), ("pl", "Polski")]
 CATALOG_ORDER = ["en", "ru", "tr", "pl"]
 
@@ -37,7 +37,7 @@ def _read_ui() -> dict:
 
 
 def ui_get(key: str, default=None):
-    """Liest einen Wert aus der Oberflächen-Datei (Sprache, gesehene Rundgänge)."""
+    """Reads a value from the UI file (language, tours already seen)."""
     return _read_ui().get(key, default)
 
 
@@ -79,7 +79,7 @@ def _catalog() -> dict[str, tuple]:
 
 
 def set_language(code: str) -> None:
-    """Stellt die Sprache ein und baut die Suchtabellen auf."""
+    """Sets the language and builds the lookup tables."""
     global _lang
     if code not in dict(LANGUAGES):
         code = "de"
@@ -101,11 +101,11 @@ def set_language(code: str) -> None:
         else:
             _exact[german] = text
             _reverse.setdefault(text, german)
-    _templates.sort(key=lambda t: -len(t[0].pattern))      # spezifischere Muster zuerst
+    _templates.sort(key=lambda t: -len(t[0].pattern))      # more specific patterns first
 
 
 def tr(text):
-    """Übersetzt einen deutschen Text (Nicht-Texte und unbekannte Texte bleiben unverändert)."""
+    """Translates a German text (non-texts and unknown texts stay unchanged)."""
     if _lang == "de" or not isinstance(text, str) or not text:
         return text
     hit = _exact.get(text)
@@ -130,11 +130,11 @@ def tr(text):
 
 
 def source(text):
-    """Gegenstück zu tr: übersetzter Text → deutscher Originaltext (für Vergleiche im Code)."""
+    """Counterpart of tr: translated text → German original text (for comparisons in the code)."""
     return _reverse.get(text, text) if _lang != "de" and isinstance(text, str) else text
 
 
-# ---- Einbindung in tkinter ------------------------------------------------
+# ---- Hooking into tkinter ------------------------------------------------
 
 def _tr_option(key: str, value):
     if key in ("text", "title", "label") and isinstance(value, str):
@@ -145,7 +145,7 @@ def _tr_option(key: str, value):
 
 
 def install() -> None:
-    """Hängt die Übersetzung in tkinter ein (einmal pro Prozess)."""
+    """Hooks the translation into tkinter (once per process)."""
     global _installed
     if _installed:
         return

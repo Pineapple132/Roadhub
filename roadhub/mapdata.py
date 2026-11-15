@@ -1,7 +1,7 @@
-"""Kartendaten: Positionen der ETS2-Städte (echte Geokoordinaten, grob) und der Sehenswürdigkeiten.
+"""Map data: positions of the ETS2 cities (real geo coordinates, rough) and of the sights.
 
-Die Karte ist eine schematische Europakarte. Die Spielkarte von ETS2 selbst ist urheberrechtlich
-geschützt und liegt nicht bei. Die Städte stehen dort, wo sie in der Wirklichkeit liegen.
+The map is a schematic map of Europe. The ETS2 game map itself is protected by copyright
+and is not included. The cities are where they are in reality.
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 
-# 'city.xyz' -> (Breite, Länge)
+# 'city.xyz' -> (latitude, longitude)
 CITY_COORDS: dict[str, tuple[float, float]] = {
     "city.a_coruna": (43.37, -8.40), "city.aalborg": (57.05, 9.92), "city.aarhus": (56.16, 10.20),
     "city.ajaccio": (41.92, 8.74), "city.akureyri": (65.68, -18.10), "city.albacete": (38.99, -1.86),
@@ -81,8 +81,8 @@ CITY_COORDS: dict[str, tuple[float, float]] = {
 }
 
 
-# 'viewpoints.xyz' -> (Breite, Länge). Von Hand gesetzt, wo ich den Ort sicher kenne, sonst aus den
-# Streckenlängen im Save geschätzt (tools/locate_sights.py). Alle Werte sind ungefähr.
+# 'viewpoints.xyz' -> (latitude, longitude). Set by hand where I know the place for sure, otherwise estimated from the
+# route lengths in the save (tools/locate_sights.py). All values are approximate.
 SIGHT_COORDS: dict[str, tuple[float, float]] = {
     "viewpoints.atgrossglock": (47.07, 12.69), "viewpoints.atschonbrunn": (48.18, 16.31),
     "viewpoints.atworthersee": (46.62, 14.16), "viewpoints.baltcastles": (59.38, 26.88),
@@ -175,18 +175,18 @@ def coords(key: str) -> tuple[float, float] | None:
 
 
 def sight_label(key: str) -> str:
-    """Anzeigename einer Sehenswürdigkeit ('Geysir'); unbekannte bekommen den Roh-Namen."""
+    """Display name of a sight ('Geysir'); unknown ones get the raw name."""
     if key in SIGHT_NAMES:
         return SIGHT_NAMES[key]
     return "Aussicht " + key.split(".", 1)[-1]
 
 
-# ---------------------------------------------------------------- Küstenlinien / Grenzen
+# ---------------------------------------------------------------- Coastlines / borders
 _SHAPES: list[list[list[float]]] | None = None
 
 
 def shapes() -> list[list[list[float]]]:
-    """Länderumrisse (Natural Earth 110m, gemeinfrei) als Liste von Ringen [[lon, lat], ...]."""
+    """Country outlines (Natural Earth 110m, public domain) as a list of rings [[lon, lat], ...]."""
     global _SHAPES
     if _SHAPES is None:
         path = os.path.join(os.path.dirname(__file__), "europe_shapes.json")

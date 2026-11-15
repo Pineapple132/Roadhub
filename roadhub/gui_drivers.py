@@ -1,4 +1,4 @@
-"""Seite „Fahrer“: einstellen, weiterbilden, Bussen zuweisen."""
+"""Page "Drivers": hire, train, assign to buses."""
 
 from __future__ import annotations
 
@@ -168,7 +168,7 @@ class TrainDialog(Dialog):
 
 
 class AssignDriverDialog(Dialog):
-    """Entweder zu einem Bus den Fahrer wählen (bus=...) oder zu einem Fahrer den Bus (driver=...)."""
+    """Either choose the driver for a bus (bus=...) or the bus for a driver (driver=...)."""
 
     def __init__(self, master: tk.Misc, company: BusCompany, bus=None, driver: Driver | None = None) -> None:
         title = f"Fahrer für Bus #{bus.id}" if bus is not None else f"Bus für {driver.name}"

@@ -34,8 +34,8 @@ def test_array_replace_keeps_position_and_changes_count():
     assert doc.get(unit, "saved_targets") == "1"
     assert doc.get_array(unit, "saved_targets") == ['"city.bern"']
     keys = [k for _, k, _ in doc.attrs(unit)]
-    assert keys.index("saved_targets") < keys.index("targets_distances")  # gleiche Stelle
-    # andere Units unversehrt
+    assert keys.index("saved_targets") < keys.index("targets_distances")  # same place
+    # other units untouched
     assert doc.get(doc.first("bank"), "money_account") == "1234567"
 
 
@@ -62,7 +62,7 @@ def test_known_legs_and_estimate():
     offers = bl.list_line_offers(make_doc())
     legs = bl.known_legs(offers)
     assert legs[("city.zurich", "city.bern")].km == 116
-    assert legs[("city.bern", "city.basel")].km == 90          # zweite Etappe: von Ziel 0 nach Ziel 1
+    assert legs[("city.bern", "city.basel")].km == 90          # second leg: from destination 0 to destination 1
     assert ("city.bern", "city.zurich") in legs
     est = bl.estimate_leg(100, legs)
     assert est.km == 100 and est.minutes > 0 and 0 < est.base_minutes <= est.minutes
@@ -129,11 +129,11 @@ def test_apply_line_changes_only_expected_lines():
         {"slot": 7},
         {"line_type": "express"},
         {"targets": [], "legs": []},
-        {"targets": ["city.bern"] * 2, "legs": [bl.Leg(1, 1, 1)] * 2},     # gleiche Haltestelle hintereinander
+        {"targets": ["city.bern"] * 2, "legs": [bl.Leg(1, 1, 1)] * 2},     # same stop twice in a row
         {"targets": ["city.nowhere"], "legs": [bl.Leg(10, 10, 8)]},
-        {"targets": ["city.zurich"], "legs": [bl.Leg(10, 10, 8)]},         # Start == Ziel
+        {"targets": ["city.zurich"], "legs": [bl.Leg(10, 10, 8)]},         # start == destination
         {"legs": [bl.Leg(0, 10, 8), bl.Leg(90, 80, 65)]},
-        {"legs": [bl.Leg(116, 100, 80)]},                                  # Anzahl passt nicht
+        {"legs": [bl.Leg(116, 100, 80)]},                                  # count does not match
         {"bus_name": ""},
         {"departure": 1440},
         {"hours_valid": 0},

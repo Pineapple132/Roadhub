@@ -6921,4 +6921,6 @@ CATALOG = {'Busunternehmen im Zeitraffer  ·  Save-Editor für Truck und Bus': (
  'Einnahmen simulierter Fahrten und Verträge': ('Income of simulated trips and contracts',
                                                 'Доход от симулированных рейсов и контрактов',
                                                 'Simüle edilen seferlerin ve sözleşmelerin geliri',
-                                                'Przychody z symulowanych kursów i kontraktów')}
+                                                'Przychody z symulowanych kursów i kontraktów'),
+ 'abgeschlossen': ('completed', 'завершён', 'tamamlandı', 'zakończony'),
+ 'abgebrochen': ('cancelled', 'расторгнут', 'iptal edildi', 'zerwany')}

@@ -1,4 +1,4 @@
-"""GUI-Rauchtest unter Xvfb: lädt einen Test-Save, ändert Profil+Auftrag, speichert, liest zurück."""
+"""GUI smoke test under Xvfb: loads a test save, changes profile + job, saves, reads it back."""
 import os as _os; _os.environ.setdefault("ETS2_SKIP_TUTORIAL", "1")
 import os, sys, tempfile, pathlib
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -6,7 +6,7 @@ from tests.fixtures import make_save_text
 from roadhub import sii, editor
 
 root = pathlib.Path(tempfile.mkdtemp())
-prof = root / "profiles" / "4D79204E616D65" / "save" / "quicksave"   # hex für "My Name"
+prof = root / "profiles" / "4D79204E616D65" / "save" / "quicksave"   # hex for "My Name"
 prof.mkdir(parents=True)
 (prof / "game.sii").write_bytes(sii.encrypt_text(make_save_text().encode()))
 os.environ["ETS2_SAVE_ROOT"] = str(root / "profiles")
@@ -30,13 +30,13 @@ assert app.doc is not None
 assert app.profile_vars["money_account"].get() == "1234567"
 assert len(app.tree.get_children()) == 8
 
-# Profil ändern
+# change profile
 app.profile_vars["money_account"].set("5000000"); app.profile_vars["adr"].set("63")
 app.profile_vars["bus_experience_points"].set("7777"); app.profile_vars["tight_schedule"].set("2")
 assert app.chip_vars["busxp"].get() == "7.777", app.chip_vars["busxp"].get()
 assert app.dirty and app.title().startswith("*")
 
-# Auftrag bearbeiten
+# edit job
 iid = app.tree.get_children()[0]
 app.tree.selection_set(iid); app.update()
 offer = app._selected_offer()
@@ -46,7 +46,7 @@ dlg.dist_var.set("777"); dlg.urg.current(2); dlg.hours_var.set("24")
 dlg._apply(); app.update()
 assert app.jobs_dirty
 
-# Screenshot der Aufträge-Ansicht
+# screenshot of the jobs view
 app.show_page("jobs"); app.geometry("980x640+0+0"); app.update()
 try:
     from PIL import ImageGrab

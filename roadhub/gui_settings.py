@@ -1,4 +1,4 @@
-"""Seite „Einstellungen“: Preise, Kosten, Verdienst und Betrieb der Firma einstellen."""
+"""Page "Settings": set prices, costs, income and operation of the company."""
 
 from __future__ import annotations
 
@@ -50,7 +50,7 @@ class SettingsPage(_Page):
         self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
 
     def _build(self) -> None:
-        # Firmenwerte aus den Settings (nicht aus TUNABLES)
+        # company values from the settings (not from TUNABLES)
         self.extra = {
             "Einnahmen": [("profit_multiplier", "Gewinnfaktor auf alle Einnahmen", 0.1, 5.0, 0.1, "×")],
             "Bus-XP": [("xp_per_trip", "Bus-XP pro Fahrt (Obergrenze)", 0, 1000, 5, "XP")],

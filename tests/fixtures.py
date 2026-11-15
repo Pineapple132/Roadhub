@@ -1,7 +1,7 @@
-"""Erzeugt einen kleinen, synthetischen Save im Aufbau eines echten game.sii.
+"""Creates a small synthetic save in the structure of a real game.sii.
 
-ACHTUNG: Das ist kein echter Spielstand, sondern ein nach dem bekannten Format
-nachgebauter Testfall (Struktur laut TS-SE-Tool-Quellcode).
+ATTENTION: This is not a real save game, but a test case rebuilt from the known format
+(structure according to the TS-SE-Tool source code).
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ def make_save_text(eol: str = "\r\n", empty_first_slot: bool = False) -> str:
         "}",
     ]
 
-    # Jobs und Events
+    # jobs and events
     offer_idx = 0
     job_units: list[str] = []
     company_units: list[str] = []
@@ -90,7 +90,7 @@ def make_save_text(eol: str = "\r\n", empty_first_slot: bool = False) -> str:
         company_units += [f" job_offer[{i}]: {o}" for i, o in enumerate(offers)]
         company_units += [" discovered: true", "}"]
 
-    # --- Bus-Haltestellen, Linienangebote und deren Ablauf-Events -----------------
+    # --- bus stops, line offers and their expiry events -----------------
     bus_units: list[str] = []
     bus_offer_names = {
         ("zurich", 0): "_nameless.line.0001",

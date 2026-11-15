@@ -1,17 +1,17 @@
-"""Bus-Aufträge (Linienangebote, line_offer_data) lesen und bearbeiten.
+"""Read and edit bus jobs (line offers, line_offer_data).
 
-Aufbau (an einem echten Save mit Coaches-DLC geprüft):
+Structure (checked against a real save with the Coaches DLC):
   bus_stop : bus_stop.city.berlin { lines_offer: N  lines_offer[i]: _nameless... }
   line_offer_data : _nameless... {
       type: regular | tourist
-      source: bus_stop.city.berlin            (bei leeren Slots: null)
-      saved_targets[i]: "city.wien"           Ziele in Reihenfolge (bis 5)
+      source: bus_stop.city.berlin            (for empty slots: null)
+      saved_targets[i]: "city.wien"           destinations in order (up to 5)
       targets_distances[i], targets_times[i], targets_base_times[i], targets_ferry_times[i]
-          -> jeweils pro Etappe (Etappe 0 = Start -> Ziel 0, Etappe i = Ziel i-1 -> Ziel i)
-      departure_time_of_day: Minuten ab Mitternacht
+          -> per leg (leg 0 = start -> destination 0, leg i = destination i-1 -> destination i)
+      departure_time_of_day: minutes since midnight
       bus_name, expiration_time, ... }
-  Der Ablauf wird wie bei Truck-Aufträgen über economy_event gesteuert
-  (unit_link = bus_stop-Name, param = Slot) und muss mitgeändert werden.
+  As with truck jobs, expiry is controlled via economy_event
+  (unit_link = bus_stop name, param = slot) and has to be changed along with it.
 """
 
 from __future__ import annotations
@@ -44,16 +44,16 @@ class Leg:
 
 @dataclass
 class LineOffer:
-    stop_unit: str            # z. B. 'bus_stop.city.berlin'
+    stop_unit: str            # e.g. 'bus_stop.city.berlin'
     slot: int
     offer_unit: str
     line_type: str
-    source: str               # 'bus_stop.city.berlin' oder 'null'
-    targets: list[str]        # ohne Anführungszeichen, z. B. 'city.wien'
+    source: str               # 'bus_stop.city.berlin' or 'null'
+    targets: list[str]        # without quotation marks, e.g. 'city.wien'
     legs: list[Leg]
     bus_name: str
     departure: int
-    expiration: str           # roh ('nil' möglich)
+    expiration: str           # raw ('nil' possible)
 
     @property
     def is_empty(self) -> bool:
@@ -77,11 +77,11 @@ def stop_label(unit_name: str) -> str:
     return unit_name[len("bus_stop."):] if unit_name.startswith("bus_stop.") else unit_name
 
 
-SIGHT_LABELS: dict[str, str] = {}   # wird von mapdata gefüllt (Anzeigenamen der Sehenswürdigkeiten)
+SIGHT_LABELS: dict[str, str] = {}   # filled by mapdata (display names of the sights)
 
 
 def pretty_stop(name: str) -> str:
-    """'city.a_coruna' -> 'A Coruna'; 'viewpoints.isgeyser' -> 'Aussicht: isgeyser'."""
+    """'city.a_coruna' -> 'A Coruna'; 'viewpoints.isgeyser' -> 'Aussicht: isgeyser' (German label)."""
     kind, _, rest = name.partition(".")
     text = rest.replace("_", " ")
     if kind == "viewpoints":
@@ -129,7 +129,7 @@ def list_line_offers(doc: SiiDocument) -> list[LineOffer]:
 
 
 def list_stop_targets(doc: SiiDocument) -> list[str]:
-    """Alle möglichen Ziele ('city.berlin', 'viewpoints.isgeyser')."""
+    """All possible destinations ('city.berlin', 'viewpoints.isgeyser')."""
     return sorted(stop_label(u.name) for u in doc.by_type.get("bus_stop", []) if u.name.startswith("bus_stop."))
 
 
@@ -138,7 +138,7 @@ def list_bus_models(offers: list[LineOffer]) -> list[str]:
 
 
 def known_legs(offers: list[LineOffer]) -> dict[tuple[str, str], Leg]:
-    """(von, nach) -> Etappe, aus allen vorhandenen Angeboten."""
+    """(from, to) -> leg, from all existing offers."""
     legs: dict[tuple[str, str], Leg] = {}
     for offer in offers:
         if offer.is_empty:
@@ -152,7 +152,7 @@ def known_legs(offers: list[LineOffer]) -> dict[tuple[str, str], Leg]:
 
 
 def estimate_leg(km: int, legs: dict[tuple[str, str], Leg]) -> Leg:
-    """Fahrzeit einer unbekannten Etappe aus dem Verhältnis bekannter Etappen schätzen."""
+    """Estimates the travel time of an unknown leg from the ratio of known legs."""
     sample = [l for l in legs.values() if l.km >= 50 and l.minutes > 0 and l.base_minutes > 0]
     if sample:
         per_km = statistics.median(l.minutes / l.km for l in sample)
@@ -210,7 +210,7 @@ def _validate(doc: SiiDocument, spec: LineSpec):
 
 
 def apply_line(doc: SiiDocument, spec: LineSpec) -> int:
-    """Überschreibt einen Linien-Slot. Gibt die Ablaufzeit (Spielminuten) zurück."""
+    """Overwrites a line slot. Returns the expiry time (game minutes)."""
     offer_name = _validate(doc, spec)
     expiration = game_time(doc) + spec.hours_valid * 60
 

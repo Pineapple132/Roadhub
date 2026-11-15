@@ -1,4 +1,4 @@
-"""Findet Profile und Spielstände im Standard-Ordner von ETS2."""
+"""Finds profiles and save games in the default ETS2 folder."""
 
 from __future__ import annotations
 
@@ -11,14 +11,14 @@ GAME_FOLDER = "Euro Truck Simulator 2"
 
 @dataclass(frozen=True)
 class SaveEntry:
-    profile: str      # lesbarer Profilname
-    folder: str       # Name des Save-Ordners (quicksave, autosave, 1, ...)
-    path: str         # vollständiger Pfad zur game.sii
+    profile: str      # readable profile name
+    folder: str       # name of the save folder (quicksave, autosave, 1, ...)
+    path: str         # full path to game.sii
     mtime: float
 
 
 def candidate_roots() -> list[Path]:
-    """Mögliche Ordner mit 'profiles' / 'steam_profiles' (nur existierende)."""
+    """Possible folders with 'profiles' / 'steam_profiles' (existing ones only)."""
     home = Path.home()
     bases = [
         home / "Documents",
@@ -39,7 +39,7 @@ def candidate_roots() -> list[Path]:
 
 
 def decode_profile_name(folder: str) -> str:
-    """Profilordner heißen wie der hex-kodierte UTF-8-Name ('4D79' -> 'My')."""
+    """Profile folders are named like the hex-encoded UTF-8 name ('4D79' -> 'My')."""
     try:
         return bytes.fromhex(folder).decode("utf-8")
     except (ValueError, UnicodeDecodeError):

@@ -1,5 +1,5 @@
-"""Lade-Feedback für alle Buttons: Solange ein Klick verarbeitet wird, zeigt das Fenster den Sanduhr-Cursor
-und in der Statuszeile „Bitte warten …“. Öffnet der Klick einen Dialog, wird die Anzeige währenddessen pausiert."""
+"""Loading feedback for all buttons: while a click is being processed, the window shows the hourglass cursor
+and "Bitte warten …" (Please wait …) in the status bar. If the click opens a dialog, the display is paused meanwhile."""
 from __future__ import annotations
 
 import functools
@@ -105,7 +105,7 @@ def _paused_call(func):
 
 
 def install(app) -> None:
-    """Muss nach i18n.install() aufgerufen werden. Pro Prozess werden die Hooks einmal gesetzt."""
+    """Must be called after i18n.install(). The hooks are set once per process."""
     global _app, _installed
     _app = app
     if _installed:

@@ -1,4 +1,4 @@
-"""Seite „Karte“: Europa mit Städten, Sehenswürdigkeiten, Garagen und fahrenden Bussen."""
+"""Page "Map": Europe with cities, sights, garages and moving buses."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from .gui_company import AssignRouteDialog, BuildGarageDialog, BuyBusDialog, _Pa
 from .gui_routes import RouteDialog
 from .widgets import APP_TITLE
 
-LAT_SCALE = math.cos(math.radians(53))     # Länge wird gestaucht, damit Europa nicht verzerrt aussieht
-HOME = (14.0, 54.0, 11.5)                  # Mitte (Länge, Breite) und Start-Zoom (Pixel pro Breitengrad)
+LAT_SCALE = math.cos(math.radians(53))     # longitude is compressed so that Europe does not look distorted
+HOME = (14.0, 54.0, 11.5)                  # centre (longitude, latitude) and start zoom (pixels per degree of latitude)
 LAND = "#252c30"
 LAND_EDGE = "#3d4850"
 SEA = "#11161a"
@@ -26,7 +26,7 @@ class MapPage(_Page):
     def __init__(self, parent: tk.Misc, shell) -> None:
         super().__init__(parent, shell)
         self.cx, self.cy, self.zoom = HOME[0], HOME[1], HOME[2]
-        self.selected: tuple[str, str] | None = None        # ("city" | "sight" | "bus", Schlüssel)
+        self.selected: tuple[str, str] | None = None        # ("city" | "sight" | "bus", key)
         self._drag: tuple[int, int] | None = None
         self._moved = False
         self._first_draw = True
@@ -71,7 +71,7 @@ class MapPage(_Page):
         c.bind("<Button-4>", lambda e: self._zoom_at(e.x, e.y, 1.25))
         c.bind("<Button-5>", lambda e: self._zoom_at(e.x, e.y, 0.8))
 
-    # ---- Koordinaten --------------------------------------------------------
+    # ---- Coordinates --------------------------------------------------------
     def to_screen(self, lat: float, lon: float) -> tuple[float, float]:
         w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
         return (w / 2 + (lon - self.cx) * LAT_SCALE * self.zoom, h / 2 - (lat - self.cy) * self.zoom)
@@ -107,7 +107,7 @@ class MapPage(_Page):
         else:
             self.redraw()
 
-    # ---- Maus ---------------------------------------------------------------
+    # ---- Mouse ---------------------------------------------------------------
     def _press(self, e) -> None:
         self._drag, self._moved = (e.x, e.y), False
 
@@ -138,7 +138,7 @@ class MapPage(_Page):
         self.cy = lat + (y - h / 2) / self.zoom
         self.redraw()
 
-    # ---- Zeichnen -----------------------------------------------------------
+    # ---- Drawing -----------------------------------------------------------
     def refresh(self) -> None:
         self.redraw()
 
@@ -222,14 +222,14 @@ class MapPage(_Page):
             lat, lon = a[0] + (b[0] - a[0]) * frac, a[1] + (b[1] - a[1]) * frac
             x, y = self.to_screen(lat, lon)
             moving = status == "unterwegs"
-            if not moving:           # parkende Busse neben der Stadt, damit die Garage anklickbar bleibt
+            if not moving:           # parked buses next to the city so the garage stays clickable
                 x, y = x + 9, y + 8
             r = 5 if moving else 3
             c.create_rectangle(x - r, y - r, x + r, y + r, fill=BUS_COLOR if moving else "#9aa3a8",
                                outline=theme.ACCENT if self.selected == ("bus", str(bus.id)) else SEA,
                                width=2, tags="bus")
 
-    # ---- Klick --------------------------------------------------------------
+    # ---- Click --------------------------------------------------------------
     def _click(self, x: float, y: float) -> None:
         company = self.company
         best: tuple[float, tuple[str, str]] | None = None
@@ -257,7 +257,7 @@ class MapPage(_Page):
         self.show_selection()
         self.redraw()
 
-    # ---- Seitenleiste ---------------------------------------------------------
+    # ---- Sidebar ---------------------------------------------------------
     def _clear_actions(self) -> None:
         for w in self.actions.winfo_children():
             w.destroy()
@@ -353,7 +353,7 @@ class MapPage(_Page):
 
     def _new_route(self, start: str | None = None, stop: str | None = None) -> None:
         c = self.company
-        if stop and not start:      # nächstgelegene Garage als Start
+        if stop and not start:      # nearest garage as the start
             target = mapdata.coords(stop)
             near = [(busco._haversine(mapdata.coords(g), target), g) for g in c.garages if mapdata.coords(g)]
             start = min(near)[1] if near and target else None

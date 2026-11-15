@@ -1,4 +1,4 @@
-"""Kleine gemeinsame Bausteine für die Oberfläche."""
+"""Small shared building blocks for the user interface."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ APP_TITLE = "Roadhub"
 
 
 class Dialog(tk.Toplevel):
-    """Modaler Dialog im Programmdesign. Unterklassen füllen self.body und überschreiben on_ok()."""
+    """Modal dialog in the application design. Subclasses fill self.body and override on_ok()."""
 
     def __init__(self, master: tk.Misc, title: str, ok_text: str = "OK") -> None:
         super().__init__(master)
@@ -39,7 +39,7 @@ class Dialog(tk.Toplevel):
         messagebox.showerror(APP_TITLE, text, parent=self)
 
     def popup(self) -> None:
-        """Mittig über dem Hauptfenster anzeigen und auf das Schließen warten."""
+        """Show centred over the main window and wait for it to close."""
         self.update_idletasks()
         root = self.master.winfo_toplevel()
         x = root.winfo_rootx() + max(0, (root.winfo_width() - self.winfo_reqwidth()) // 2)
@@ -50,7 +50,7 @@ class Dialog(tk.Toplevel):
 
 
 def card(parent: tk.Misc, caption: str, accent: bool = False) -> tuple[ttk.Frame, tk.StringVar]:
-    """Kleine Kennzahl-Karte: Überschrift + großer Wert."""
+    """Small key figure card: heading + large value."""
     frame = ttk.Frame(parent, style="Card.TFrame", padding=(14, 10))
     ttk.Label(frame, text=caption, style="CardCaption.TLabel").pack(anchor="w")
     var = tk.StringVar(value="–")
@@ -61,7 +61,7 @@ def card(parent: tk.Misc, caption: str, accent: bool = False) -> tuple[ttk.Frame
 
 
 def make_tree(parent: tk.Misc, columns: list[tuple[str, str, int, str]], height: int = 12):
-    """columns: (id, Überschrift, Breite, Ausrichtung). Gibt (Frame, Treeview) zurück."""
+    """columns: (id, heading, width, alignment). Returns (frame, treeview)."""
     wrap = ttk.Frame(parent)
     ids = [c[0] for c in columns]
     tree = ttk.Treeview(wrap, columns=ids, show="headings", selectmode="browse", height=height)
@@ -78,7 +78,7 @@ def make_tree(parent: tk.Misc, columns: list[tuple[str, str, int, str]], height:
 
 
 def fill_tree(tree: ttk.Treeview, rows: list[tuple[str, tuple]]) -> None:
-    """rows: (iid, Werte). Behält die Auswahl, wenn es die Zeile noch gibt."""
+    """rows: (iid, values). Keeps the selection if the row still exists."""
     selected = tree.selection()
     tree.delete(*tree.get_children())
     for i, (iid, values) in enumerate(rows):

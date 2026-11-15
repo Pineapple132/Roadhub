@@ -1,7 +1,7 @@
-"""Liest die Telemetrie von ETS2 (nur lesen) und erkennt Start und Ende echter Fahrten.
+"""Reads the telemetry of ETS2 (read only) and detects the start and end of real trips.
 
-Quelle ist der ets2-telemetry-server von Funbit (HTTP/JSON, Standard http://127.0.0.1:25555/api/ets2/telemetry).
-Ohne Spiel gibt es eine Demo-Fahrt, die dieselben Daten liefert.
+The source is the ets2-telemetry-server by Funbit (HTTP/JSON, default http://127.0.0.1:25555/api/ets2/telemetry).
+Without the game there is a demo trip that delivers the same data.
 """
 
 from __future__ import annotations
@@ -16,10 +16,10 @@ from dataclasses import dataclass
 from datetime import datetime
 
 DEFAULT_URL = "http://127.0.0.1:25555/api/ets2/telemetry"
-DELIVERED_WITHIN_M = 3000      # so nah am Ziel gilt das Ende des Auftrags als "abgeliefert"
+DELIVERED_WITHIN_M = 3000      # this close to the destination the end of the job counts as "delivered"
 
 
-DEFAULT_TIME_SCALE = 19.0      # ETS2: 1 echte Sekunde = 19 Spielsekunden
+DEFAULT_TIME_SCALE = 19.0      # ETS2: 1 real second = 19 game seconds
 
 
 @dataclass
@@ -27,22 +27,22 @@ class Snapshot:
     connected: bool = False
     paused: bool = False
     speed_kmh: float = 0.0
-    income: int = 0                # 0 = kein Auftrag
+    income: int = 0                # 0 = no job
     source: str = ""
     dest: str = ""
     cargo: str = ""
-    left_m: float = 0.0            # verbleibende Navigationsstrecke in Metern
+    left_m: float = 0.0            # remaining navigation distance in metres
     game_time: str = ""
     demo: bool = False
     vehicle: str = ""
-    eta_s: float = 0.0             # geschätzte Fahrzeit bis zum Ziel laut Navigation (Spielzeit, Sekunden)
-    game_s: float = 0.0            # absolute Spielzeit in Sekunden (0 = unbekannt)
-    time_scale: float = 0.0        # laut Server: Spielsekunden pro echter Sekunde (nicht immer verlässlich)
+    eta_s: float = 0.0             # estimated travel time to the destination according to navigation (game time, seconds)
+    game_s: float = 0.0            # absolute game time in seconds (0 = unknown)
+    time_scale: float = 0.0        # according to the server: game seconds per real second (not always reliable)
 
     @property
     def has_job(self) -> bool:
-        # Aktiv = Verdienst gemeldet UND Navigation läuft. Der Verdienst allein reicht nicht: das Plugin
-        # setzt ihn nach dem Ende nicht zurück. Bus-Linien melden keine Städte und keinen Anhänger.
+        # Active = income reported AND navigation running. The income alone is not enough: the plugin
+        # does not reset it after the end. Bus lines report no cities and no trailer.
         return self.income > 0 and self.left_m > 0
 
 
@@ -54,7 +54,7 @@ def _num(value, default=0.0) -> float:
 
 
 def parse_duration(text) -> float:
-    """Der Server schickt Zeitspannen als Datum, z. B. '0001-01-01T02:23:55Z' = 2:23:55 Stunden."""
+    """The server sends time spans as a date, e.g. '0001-01-01T02:23:55Z' = 2:23:55 hours."""
     m = re.match(r"\s*(\d+)-(\d+)-(\d+)T(\d+):(\d+):(\d+)", str(text or ""))
     if not m:
         return 0.0
@@ -63,7 +63,7 @@ def parse_duration(text) -> float:
 
 
 def parse_game_seconds(text) -> float:
-    """'0067-06-04T05:13:00Z' -> Sekunden seit Spielbeginn (nur Differenzen sind wichtig)."""
+    """'0067-06-04T05:13:00Z' -> seconds since the start of the game (only differences matter)."""
     try:
         return (datetime.fromisoformat(str(text).rstrip("Z")) - datetime(1, 1, 1)).total_seconds()
     except (TypeError, ValueError):
@@ -71,7 +71,7 @@ def parse_game_seconds(text) -> float:
 
 
 def parse_funbit(data: dict) -> Snapshot:
-    """Wandelt die JSON-Antwort des Telemetry-Servers in einen Snapshot um (fehlende Felder sind okay)."""
+    """Converts the JSON response of the telemetry server into a snapshot (missing fields are okay)."""
     game = data.get("game") or {}
     truck = data.get("truck") or {}
     trailer = data.get("trailer") or {}
@@ -94,12 +94,12 @@ def parse_funbit(data: dict) -> Snapshot:
     )
 
 
-_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))   # lokale Adresse nie über einen Proxy
+_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))   # never use a proxy for the local address
 
 
 def fetch(url: str, timeout: float = 2.0) -> Snapshot:
     req = urllib.request.Request(url, headers={"Cache-Control": "no-cache", "Accept": "application/json"})
-    with _OPENER.open(req, timeout=timeout) as resp:  # noqa: S310 - lokale URL aus den Einstellungen
+    with _OPENER.open(req, timeout=timeout) as resp:  # noqa: S310 - local URL from the settings
         return parse_funbit(json.loads(resp.read().decode("utf-8", errors="replace")))
 
 
@@ -109,10 +109,10 @@ def describe_error(exc: Exception) -> str:
 
 
 class DemoDrive:
-    """Simulierte Fahrt Hamburg - Kopenhagen, beschleunigt, damit man die Oberfläche testen kann."""
+    """Simulated trip Hamburg - Copenhagen, sped up so the interface can be tested."""
 
     TOTAL_KM = 463.0
-    RATE = 19.0                    # Spielsekunden pro echter Sekunde
+    RATE = 19.0                    # game seconds per real second
 
     def __init__(self, income: int = 6240, seconds: float = 40.0, source: str = "Hamburg",
                  dest: str = "Kopenhagen", cargo: str = "Kühlfracht") -> None:
@@ -127,7 +127,7 @@ class DemoDrive:
     def snapshot(self) -> Snapshot:
         p = self.progress
         if p >= 1.0:
-            if time.time() - self.t0 - self.seconds < 2.5:   # kurz "am Ziel" melden, damit das Ende als Lieferung zählt
+            if time.time() - self.t0 - self.seconds < 2.5:   # briefly report "at the destination" so the end counts as a delivery
                 return Snapshot(connected=True, demo=True, income=self.income, source=self.source,
                                 dest=self.dest, cargo=self.cargo, left_m=500.0)
             return Snapshot(connected=True, demo=True)
@@ -154,8 +154,8 @@ class Event:
 
 
 class TripTracker:
-    """Erkennt aus der Snapshot-Folge Auftragsstart und -ende. Kein Auftrag mehr = nur ein Snapshot reicht
-    nicht (Menüs, Ladebildschirme), deshalb müssen zwei in Folge ohne Auftrag kommen."""
+    """Detects the job start and end from the snapshot sequence. A single snapshot without a job is
+    not enough (menus, loading screens), so two in a row without a job are required."""
 
     def __init__(self) -> None:
         self.active = False
@@ -166,11 +166,11 @@ class TripTracker:
         self.last_left_m = 0.0
         self.eta_s = 0.0
         self.time_scale = 0.0
-        self._samples: deque = deque()          # (Echtzeit, Spielzeit) ohne Pausen
+        self._samples: deque = deque()          # (real time, game time) without pauses
         self._misses = 0
-        self._arrival: float | None = None      # stabile Ankunft (Echtzeit, monotonic) wie bei Google Maps
+        self._arrival: float | None = None      # stable arrival (real time, monotonic) like in Google Maps
         self._now = 0.0
-        self._stale_income = 0          # Verdienst des zuletzt beendeten Auftrags (bleibt im Plugin stehen)
+        self._stale_income = 0          # income of the most recently finished job (stays in the plugin)
 
     @property
     def progress(self) -> float:
@@ -180,7 +180,7 @@ class TripTracker:
 
     @property
     def rate(self) -> float:
-        """Spielsekunden pro echter Sekunde: gemessen, sonst ETS2-Standard (19:1)."""
+        """Game seconds per real second: measured, otherwise the ETS2 default (19:1)."""
         if len(self._samples) >= 2:
             (t0, g0), (t1, g1) = self._samples[0], self._samples[-1]
             if t1 - t0 >= 30 and g1 > g0:
@@ -189,7 +189,7 @@ class TripTracker:
 
     @property
     def real_eta_s(self) -> float | None:
-        """Echte Sekunden bis zum Ziel. Die Ankunft steht fest und wandert nur langsam, wenn sie spürbar abweicht."""
+        """Real seconds to the destination. The arrival is fixed and only moves slowly when it clearly deviates."""
         if self._arrival is None:
             return None
         return max(0.0, self._arrival - self._now)
@@ -203,14 +203,14 @@ class TripTracker:
             self._arrival = now + self.eta_s / self.rate
             return
         if snap.paused:
-            self._arrival += now - last              # Pause: die echte Zeit läuft, die Fahrt nicht
+            self._arrival += now - last              # pause: real time runs, the trip does not
             return
         if self.eta_s <= 0:
             return
         raw = now + self.eta_s / self.rate
         diff = raw - self._arrival
         remaining = max(0.0, self._arrival - now)
-        if abs(diff) > max(120.0, 0.08 * remaining):       # nur bei spürbarer Abweichung nachführen
+        if abs(diff) > max(120.0, 0.08 * remaining):       # only adjust on a noticeable deviation
             self._arrival += diff * min(1.0, 0.03 * (now - last))
 
     @property
@@ -220,10 +220,10 @@ class TripTracker:
     def update(self, snap: Snapshot, now: float | None = None) -> list[Event]:
         if not snap.connected:
             self._samples.clear()
-            return []                       # keine Verbindung sagt nichts über den Auftrag
+            return []                       # no connection says nothing about the job
         now = time.monotonic() if now is None else now
         if snap.paused or snap.game_s <= 0:
-            self._samples.clear()           # in der Pause läuft die Spielzeit nicht mit
+            self._samples.clear()           # game time does not advance during the pause
         else:
             self._samples.append((now, snap.game_s))
             while self._samples and now - self._samples[0][0] > 300:
@@ -232,9 +232,9 @@ class TripTracker:
             self.time_scale = snap.time_scale
         events: list[Event] = []
         if snap.income != self._stale_income:
-            self._stale_income = 0       # neuer oder gelöschter Auftrag: Sperre aufheben
+            self._stale_income = 0       # new or deleted job: lift the lock
         if snap.has_job and snap.income == self._stale_income:
-            return events                # Rest des alten Auftrags, keine neue Fahrt
+            return events                # remainder of the old job, no new trip
         if snap.has_job:
             self._misses = 0
             if snap.vehicle:
@@ -263,7 +263,7 @@ class TripTracker:
         return events
 
     def force_end(self, kind: str) -> Event | None:
-        """Fahrt von Hand beenden ('delivered' oder 'cancelled')."""
+        """Ends a trip by hand ('delivered' or 'cancelled')."""
         if not self.active:
             return None
         return self._end(kind)
@@ -279,7 +279,7 @@ class TripTracker:
 
 
 class TelemetryClient:
-    """Fragt die Telemetrie in einem Hintergrund-Thread ab, damit die Oberfläche nie hängt."""
+    """Polls the telemetry in a background thread so the interface never hangs."""
 
     def __init__(self) -> None:
         self.url = DEFAULT_URL
@@ -300,7 +300,7 @@ class TelemetryClient:
                 try:
                     self.snapshot = fetch(self.url)
                     self.error = ""
-                except Exception as exc:  # noqa: BLE001 - Verbindungsfehler sind normal, solange ETS2 aus ist
+                except Exception as exc:  # noqa: BLE001 - connection errors are normal while ETS2 is off
                     self.snapshot = Snapshot()
                     self.error = describe_error(exc)
             else:

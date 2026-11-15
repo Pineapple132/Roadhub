@@ -1,4 +1,4 @@
-"""GUI-Rauchtest Busfirma + Bus-Aufträge + Auszahlung. Aufruf: gui_smoke_company.py <game.sii> [screenshot-dir]"""
+"""GUI smoke test bus company + bus jobs + payout. Usage: gui_smoke_company.py <game.sii> [screenshot-dir]"""
 import os as _os; _os.environ.setdefault("ETS2_SKIP_TUTORIAL", "1")
 import os, sys, shutil, tempfile, pathlib
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,7 +16,7 @@ from tkinter import messagebox
 messagebox.askokcancel = lambda *a, **k: True
 messagebox.showinfo = lambda *a, **k: print("INFO:", a[1][:60].replace("\n", " "))
 messagebox.showerror = lambda *a, **k: (_ for _ in ()).throw(AssertionError(a[1]))
-messagebox.askyesno = lambda *a, **k: False   # kein automatisches Laden
+messagebox.askyesno = lambda *a, **k: False   # no automatic loading
 
 from roadhub import gui, gui_company, gui_buslines
 
@@ -32,10 +32,10 @@ app._scan_saves(); app.update()
 shot(app, "00_leer")
 assert app.company is None
 app._load_selected(); app.update()
-assert app.company is None and str(app.overview.found_btn.cget("state")) == "normal"   # Save geladen, aber noch nicht gegründet
+assert app.company is None and str(app.overview.found_btn.cget("state")) == "normal"   # save loaded, but company not founded yet
 shot(app, "00b_gruenden")
 real_money = app.account_money
-app.account_money = lambda: 100_000                       # zu wenig Geld: Gründen geht nicht
+app.account_money = lambda: 100_000                       # not enough money: founding is not possible
 app.overview.refresh(); app.update()
 assert str(app.overview.found_btn.cget("state")) == "disabled" and "50.000" in app.overview.found_info.cget("text")
 assert app._create_company() is False and app.company is None
@@ -49,11 +49,11 @@ assert app.nav_buttons["garages"].winfo_ismapped() and app.nav_buttons["settings
 assert abs(c.firm_delta() + busco.FOUNDING_COST) < 0.01 and c.fin_total["Firmengründung"] == busco.FOUNDING_COST
 shot(app, "01_uebersicht")
 
-# Garage bauen
+# build garage
 city = c.catalog.cities()[0]
-c.build_garage(city, "mittel"); app.company_changed()
+c.build_garage(city, "medium"); app.company_changed()
 assert city in c.garages
-# Bus kaufen und Linie zuweisen
+# buy a bus and assign a line
 dest = c.catalog.destinations(city)[0][0]
 bus = c.buy_bus(city, c.catalog.models[0]); c.assign_route(bus.id, dest); c.assign_driver(c.hire(c.candidates()[0].key).id, bus.id); app.company_changed()
 app.show_page("garages"); app.update(); shot(app, "02_garagen")
@@ -66,7 +66,7 @@ assert app.company.settings.tuning["rate_per_km"] == 20.0 and abs(busco.CONTRACT
 sp.vars["rate_per_km"].set("13"); sp.vars["fuel_price"].set("1.55"); sp.apply()
 assert app.company.settings.tuning == {}
 app.show_page("garages")
-# Karte
+# map
 app.show_page("map"); app.update(); app.update()
 mp = app.map_page
 assert mp.canvas.winfo_width() > 300
@@ -74,11 +74,11 @@ lat, lon = busco.mapdata.CITY_COORDS[city]
 x, y = mp.to_screen(lat, lon); mp._click(x, y)
 assert mp.selected == ("city", city), mp.selected
 shot(app, "02b_karte")
-# Sehenswürdigkeit anklicken
+# click a sight
 sight = next(k for k in c.catalog.sights())
 sx, sy = mp.to_screen(*busco.mapdata.SIGHT_COORDS[sight]); mp._click(sx + 4, sy - 4)
 assert mp.selected == ("sight", sight), mp.selected
-# Bus anklicken
+# click a bus
 for _ in range(2000):
     c.advance(15)
     if c.bus_state(bus)[3] == "unterwegs" and 0.3 < c.bus_state(bus)[2] < 0.7: break
@@ -90,7 +90,7 @@ bx, by = mp.to_screen(pa[0] + (pb[0]-pa[0])*frac, pa[1] + (pb[1]-pa[1])*frac); m
 assert mp.selected == ("bus", str(bus.id)), (mp.selected, st)
 mp.zoom = 60; mp.cx, mp.cy = lon, lat; mp.redraw(); shot(app, "02c_karte_zoom")
 mp.reset_view()
-# Fahrer
+# drivers
 app.show_page("drivers"); drv = next(iter(c.drivers.values()))
 app.drivers_page.tree.selection_set(str(drv.id)); shot(app, "02d_fahrer")
 from roadhub import gui_drivers
@@ -101,7 +101,7 @@ app.show_page("buses"); shot(app, "03_busse")
 dlg = gui_company.AssignRouteDialog(app.buses_page, c, bus); app.update()
 assert dlg.tree.get_children(); shot(app, "04_linie_zuweisen"); dlg.destroy()
 
-# Eigene Route + Ausflug + Vertrag
+# own route + excursion + contract
 c.cash += 3_000_000
 from roadhub import gui_routes, gui_contracts
 others = [d for d, *_ in c.catalog.destinations(city) if d.startswith("city.") and d != dest][:1]
@@ -116,7 +116,7 @@ assert rd2.name_var.get().startswith("Ausflug") and rd2.kind.get().startswith("A
 assert rd2.on_ok(); rd2.destroy()
 assert len(c.routes) == 2
 app.company_changed(); app.show_page("routes"); shot(app, "02f_routen")
-route = next(r for r in c.routes.values() if r.kind == "linie")
+route = next(r for r in c.routes.values() if r.kind == "line")
 bus2 = c.buy_bus(city, c.catalog.models[0]); c.assign_driver(c.hire(c.candidates()[1].key).id, bus2.id)
 ad = gui_company.AssignRouteDialog(app.buses_page, c, bus2); app.update()
 assert any(k.startswith("route:") for k in ad.tree.get_children())
@@ -129,14 +129,14 @@ app.contracts_page.offers.selection_set(offers[0].key)
 acc = gui_contracts.AcceptDialog(app.contracts_page, c, offers[0]); app.update(); shot(app, "02g_vertrag_annehmen")
 acc.tree.selection_set(str(bus3.id)); assert acc.on_ok(); acc.destroy()
 app.company_changed(); shot(app, "02h_vertraege")
-# Zeitraffer
+# fast-forward
 app.show_page("overview")
 app.overview.jump(30 * 1440); app.update()
 assert c.cash > 0 and c.xp_pending > 0, (c.cash, c.xp_pending)
 app.overview.toggle_run(); app.overview._carry = 5; app.overview.tick(); app.overview.toggle_run()
 shot(app, "05_uebersicht_nach_30_tagen")
 
-# Bus-Aufträge
+# bus jobs
 app.show_page("buslines"); app.update()
 offers = [o for o in app.buslines_page.offers() if not o.is_empty]
 assert offers
@@ -150,7 +150,7 @@ assert d.on_ok(), "Dialog nicht übernommen"
 d.destroy(); app.lines_applied(); app.update()
 assert app.jobs_dirty
 
-# Auszahlung
+# payout
 money_before = int(app.profile_vars["money_account"].get()); xp_before = int(app.profile_vars["bus_experience_points"].get() or 0)
 cash_before, xp_pending = c.cash, c.xp_pending
 delta0, xp_d = int(round(c.firm_delta())), c.xp_pending
@@ -160,7 +160,7 @@ again = sii.load(str(prof / "game.sii"))
 assert int(editor.read_profile(again)["money_account"]) == max(0, money_before + delta0)
 assert int(editor.read_bus_fields(again)["bus_experience_points"]) == min(99_999_999, xp_before + xp_d)
 assert c.xp_pending == 0 and abs(c.firm_delta()) < 0.01
-# Linie wurde mitgespeichert
+# line was saved along
 new = [o for o in buslines.list_line_offers(again) if o.stop_unit == offers[0].stop_unit and o.slot == offers[0].slot][0]
 assert new.departure == 6 * 60 + 15 and len(new.targets) == 2, new
 shot(app, "07_nach_auszahlung")

@@ -1,6 +1,6 @@
-"""Dunkles Design mit orangen Akzenten, angelehnt an die Menüs von Euro Truck Simulator 2.
+"""Dark design with orange accents, inspired by the menus of Euro Truck Simulator 2.
 
-Nur Farben und Formen – keine Logos oder Grafiken aus dem Spiel.
+Only colours and shapes – no logos or graphics from the game.
 """
 
 from __future__ import annotations
@@ -9,14 +9,14 @@ import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import ttk
 
-BG = "#15181a"            # Fensterhintergrund
-PANEL = "#1e2326"         # Kopfzeile, Karten
-PANEL_RAISED = "#2a3135"  # Tabs, Überschriften
-FIELD = "#0f1214"         # Eingabefelder
+BG = "#15181a"            # window background
+PANEL = "#1e2326"         # header, cards
+PANEL_RAISED = "#2a3135"  # tabs, headings
+FIELD = "#0f1214"         # input fields
 BORDER = "#3a4348"
 TEXT = "#ececec"
 MUTED = "#98a2a8"
-ACCENT = "#f7a021"        # ETS-typisches Orange
+ACCENT = "#f7a021"        # ETS-style orange
 ACCENT_HOVER = "#ffb84a"
 ON_ACCENT = "#17120a"
 BTN = "#2f373c"
@@ -38,7 +38,7 @@ def pick_font_family(root: tk.Misc) -> str:
 
 
 def apply(root: tk.Tk) -> dict[str, tuple]:
-    """Setzt das Theme und gibt benannte Schriften zurück."""
+    """Sets the theme and returns named fonts."""
     family = pick_font_family(root)
     fonts = {
         "base": (family, 10),
@@ -58,7 +58,7 @@ def apply(root: tk.Tk) -> dict[str, tuple]:
     style.theme_use("clam")
     root.configure(bg=BG)
 
-    # Auswahllisten der Comboboxen
+    # drop-down lists of the comboboxes
     root.option_add("*TCombobox*Listbox.background", FIELD)
     root.option_add("*TCombobox*Listbox.foreground", TEXT)
     root.option_add("*TCombobox*Listbox.selectBackground", ACCENT)
@@ -98,7 +98,7 @@ def apply(root: tk.Tk) -> dict[str, tuple]:
     )
     style.configure("TLabelframe.Label", background=BG, foreground=ACCENT, font=fonts["bold"])
 
-    # Tabs
+    # tabs
     style.configure("TNotebook", background=BG, borderwidth=0, tabmargins=[0, 6, 0, 0])
     style.configure(
         "TNotebook.Tab",
@@ -114,7 +114,7 @@ def apply(root: tk.Tk) -> dict[str, tuple]:
         foreground=[("selected", ON_ACCENT)],
     )
 
-    # Buttons
+    # buttons
     style.configure(
         "TButton",
         background=BTN,
@@ -146,7 +146,7 @@ def apply(root: tk.Tk) -> dict[str, tuple]:
     )
     style.configure("Small.TButton", padding=[8, 3], font=fonts["small"])
 
-    # Seitenleiste
+    # sidebar
     style.configure(
         "Nav.TButton", background=PANEL, foreground=TEXT, bordercolor=PANEL, relief="flat",
         padding=[20, 10], anchor="w", font=fonts["base"],
@@ -178,18 +178,18 @@ def apply(root: tk.Tk) -> dict[str, tuple]:
     style.map("NavSubActive.TButton", background=[("active", ACCENT_HOVER)], bordercolor=[("focus", ACCENT)])
     style.configure("NavHead.TLabel", background=PANEL, foreground=MUTED, font=fonts["small"])
 
-    # Notebook ohne sichtbare Reiter (die Seitenleiste wählt die Seite)
+    # notebook without visible tabs (the sidebar selects the page)
     style.layout("Hidden.TNotebook.Tab", [])
     style.configure("Hidden.TNotebook", background=BG, borderwidth=0, tabmargins=0)
 
-    # KPI-Karten
+    # KPI cards
     style.configure("Card.TFrame", background=PANEL)
     style.configure("Card.TLabel", background=PANEL, foreground=TEXT, font=fonts["base"])
     style.configure("CardCaption.TLabel", background=PANEL, foreground=MUTED, font=fonts["small"])
     style.configure("CardValue.TLabel", background=PANEL, foreground=TEXT, font=fonts["chip"])
     style.configure("CardAccent.TLabel", background=PANEL, foreground=ACCENT, font=fonts["chip"])
 
-    # Eingabefelder
+    # input fields
     for name in ("TEntry", "TSpinbox", "TCombobox"):
         style.configure(
             name,
@@ -223,7 +223,7 @@ def apply(root: tk.Tk) -> dict[str, tuple]:
         indicatorforeground=[("selected", ON_ACCENT)],
     )
 
-    # Tabelle
+    # table
     style.configure(
         "Treeview",
         background=ROW_A,
@@ -259,7 +259,7 @@ def apply(root: tk.Tk) -> dict[str, tuple]:
 
 
 def format_int(value: str | int | None) -> str:
-    """12345678 -> '12.345.678' (deutsche Schreibweise)."""
+    """12345678 -> '12.345.678' (German notation)."""
     try:
         return f"{int(str(value).strip()):,}".replace(",", ".")
     except (TypeError, ValueError):

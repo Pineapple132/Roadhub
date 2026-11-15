@@ -1,4 +1,4 @@
-"""Schätzt die Position der Sehenswürdigkeiten aus den Strecken-Kilometern im Save (Trilateration)."""
+"""Estimates the position of the sights from the route kilometres in the save (trilateration)."""
 import sys, math, json
 sys.path.insert(0, ".")
 from collections import defaultdict

@@ -1,4 +1,4 @@
-"""Seite „Finanzen“: Einnahmen und Ausgaben der Firma nach Art."""
+"""Page "Finances": income and expenses of the company by type."""
 
 from __future__ import annotations
 

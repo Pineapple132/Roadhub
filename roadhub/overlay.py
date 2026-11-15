@@ -1,7 +1,7 @@
-"""Kleines Overlay für die laufende Fahrt: immer im Vordergrund, halbtransparent, mit der Maus verschiebbar.
+"""Small overlay for the running trip: always on top, semi-transparent, movable with the mouse.
 
-Es liegt als eigenes Fenster über dem Spiel. Das klappt nur, wenn ETS2 im Fenster- oder randlosen Modus läuft;
-im exklusiven Vollbild verdeckt das Spiel andere Fenster.
+It is a separate window above the game. This only works if ETS2 runs in windowed or borderless mode;
+in exclusive fullscreen the game hides other windows.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ def fmt_clock(real_seconds: float, now: datetime | None = None) -> str:
 
 
 def fmt_arrival(real_seconds: float | None, now: datetime | None = None) -> str:
-    """Echte Ankunftszeit, z. B. '14:52 Uhr (in 48 Min)'."""
+    """Real arrival time, e.g. '14:52 Uhr (in 48 Min)' (German text)."""
     if real_seconds is None:
         return ""
     clock = (now or datetime.now()) + timedelta(seconds=real_seconds)
@@ -73,7 +73,7 @@ class Overlay(tk.Toplevel):
         except ValueError:
             x, y = 40, 40
         w, h = self.winfo_screenwidth(), self.winfo_screenheight()
-        x = min(max(-w, x), w * 2)          # mehrere Monitore erlauben, aber nicht ins Leere
+        x = min(max(-w, x), w * 2)          # allow several monitors, but not off into nowhere
         y = min(max(-h, y), h * 2)
         return f"+{x}+{y}"
 

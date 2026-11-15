@@ -1,11 +1,11 @@
-"""Busfirma: Zustand und Zeitraffer-Simulation (ohne Oberfläche).
+"""Bus company: state and fast-forward simulation (no user interface).
 
-Die Strecken und Busmodelle stammen aus dem ETS2-Save (Linienangebote). Alle Preise, Kosten und
-Nachfragewerte sind eigene Schätzungen und nur grob an den Bus-Auftragslog eines echten Saves
-angelehnt (dort: etwa 15–20 € pro Kilometer bei ~0,17 € pro Fahrgast und Kilometer).
+Routes and bus models come from the ETS2 save (line offers). All prices, costs and demand
+values are our own estimates, only loosely based on the bus job log of a real save
+(there: roughly 15-20 € per kilometre at ~0.17 € per passenger and kilometre).
 
-Die Simulation ist deterministisch: Zufall wird pro Fahrt aus (Seed, Bus, Fahrtnummer) abgeleitet,
-darum liefert "7 Tage am Stück" dasselbe wie "7 × 1 Tag".
+The simulation is deterministic: randomness is derived per trip from (seed, bus, trip number),
+so "7 days in one go" gives the same result as "7 x 1 day".
 """
 
 from __future__ import annotations
@@ -24,21 +24,21 @@ from . import buslines, mapdata
 
 STATE_VERSION = 1
 DAY = 1440
-OPERATING_START = 5 * 60        # frühestens 05:00 Uhr losfahren
-TURNAROUND = 30                 # Minuten Pause am Endpunkt
-FUEL_PRICE = 1.55               # €/Liter
-WAGE_PER_HOUR = 24.0            # Fahrer
+OPERATING_START = 5 * 60        # earliest departure at 05:00
+TURNAROUND = 30                 # minutes of rest at the end point
+FUEL_PRICE = 1.55               # € per litre
+WAGE_PER_HOUR = 24.0            # driver
 MAINTENANCE_PER_KM = 0.11
 TOLL_PER_KM = 0.06
 INSURANCE_PER_DAY = 55.0
-SERVICE_THRESHOLD = 40.0        # automatische Wartung unterhalb dieses Zustands
+SERVICE_THRESHOLD = 40.0        # automatic service below this condition
 SERVICE_COST_PER_POINT = 25.0
 SERVICE_HOURS = 8
 BREAKDOWN_BELOW = 25.0
-MAX_DRIVE_HOURS = 9.0            # Lenkzeit pro Fahrer und Tag; danach ruht der Bus bis zum nächsten Morgen
-SIM_INCOME_FACTOR = 0.3         # Anteil der Einnahmen aus simulierten Fahrten und Verträgen
-XP_PER_KM = 0.1                 # bewusst sehr niedrig: simulierte Fahrten bringen nur wenige XP
-XP_PER_TRIP_MAX = 20            # Standard-Obergrenze pro simulierter Fahrt (einstellbar)
+MAX_DRIVE_HOURS = 9.0            # driving time per driver and day; after that the bus rests until the next morning
+SIM_INCOME_FACTOR = 0.3         # share of the income from simulated trips and contracts
+XP_PER_KM = 0.1                 # deliberately very low: simulated trips only give a few XP
+XP_PER_TRIP_MAX = 20            # default upper limit per simulated trip (adjustable)
 
 
 def route_label(source: str, dest: str, vehicle: str = "") -> str:
@@ -50,46 +50,46 @@ def route_label(source: str, dest: str, vehicle: str = "") -> str:
 def trip_xp(km: float, cap: int = XP_PER_TRIP_MAX) -> int:
     return max(0, min(int(cap), int(km * XP_PER_KM)))
 LOG_LIMIT = 300
-FARE_BASE = 0.48                # € pro Fahrgast und km (ein Reisebus mit ca. 50 Sitzen kommt so im Schnitt auf ca. 13 € je gefahrenem km)
-TOURIST_FARE_FACTOR = 1.0       # Touristenfahrten: gleicher km-Satz, aber Mindestpreis pro Fahrgast und mehr Auslastung am Wochenende
-TOURIST_MIN_TICKET = 15.0       # € pro Fahrgast mindestens
-TOURIST_DWELL = 90              # Minuten Aufenthalt an der Sehenswürdigkeit statt TURNAROUND
-WAGE_PER_SKILL = 1.5            # € pro Stunde Aufschlag je Skill-Stufe
+FARE_BASE = 0.48                # € per passenger and km (a coach with about 50 seats averages about 13 € per driven km)
+TOURIST_FARE_FACTOR = 1.0       # tourist trips: same per-km rate, but a minimum price per passenger and more load at weekends
+TOURIST_MIN_TICKET = 15.0       # minimum € per passenger
+TOURIST_DWELL = 90              # minutes spent at the sight instead of TURNAROUND
+WAGE_PER_SKILL = 1.5            # € per hour surcharge per skill level
 TRAINING_DAYS = 2
-TRAINING_COST = 5_000           # × (aktuelle Stufe + 1)
+TRAINING_COST = 5_000           # × (current level + 1)
 CANDIDATES_PER_WEEK = 8
-CONTRACT_RATE_PER_KM = 26.0     # € pro km der Hinfahrt; die Rückfahrt ohne Fahrgäste ist darin enthalten (≈ 13 € je gefahrenem km)
+CONTRACT_RATE_PER_KM = 26.0     # € per km of the outbound trip; the return trip without passengers is included (≈ 13 € per driven km)
 CONTRACT_DAYS = 14
-CONTRACT_MAX_ONEWAY_MIN = 660   # längere Strecken schafft ein Bus nicht innerhalb eines Tages hin und zurück
+CONTRACT_MAX_ONEWAY_MIN = 660   # a bus cannot do longer routes there and back within one day
 CONTRACT_OFFERS_PER_WEEK = 6
-CONTRACT_BONUS = 0.10           # Bonus auf die Summe, wenn alle Fahrten klappen
-CONTRACT_CANCEL_FEE = 0.15      # Anteil des restlichen Vertragswerts bei vorzeitigem Abbruch
-ROUTE_FACTOR = 1.38             # Straßenkilometer ≈ Luftlinie × Faktor (aus den Strecken im Save)
+CONTRACT_BONUS = 0.10           # bonus on the total when all trips work out
+CONTRACT_CANCEL_FEE = 0.15      # share of the remaining contract value on early cancellation
+ROUTE_FACTOR = 1.38             # road kilometres ≈ straight-line distance × factor (from the routes in the save)
 MAX_ROUTE_STOPS = 6
 LEDGER_DAYS = 120
 
-# Finanzen: Kategorien für den Reiter "Finanzen"
+# Finances: categories for the "Finances" tab
 INCOME_CATS = ["Linien & Ausflüge", "Verträge (inkl. Bonus)", "Echte Fahrten (schon im Spiel)"]
-FOUNDING_COST = 150_000          # so viel ETS2-Geld kostet die Gründung der Firma
+FOUNDING_COST = 150_000          # this much ETS2 money is the cost of founding the company
 EXPENSE_CATS = ["Firmengründung", "Treibstoff", "Fahrerlöhne", "Wartung & Maut", "Werkstatt & Pannen", "Versicherung",
                 "Garagenunterhalt", "Käufe (Garagen, Busse)", "Fahrer (Einstellung, Weiterbildung)",
                 "Vertragsstrafen"]
 
 MODEL_PRICE_FACTOR = 1.0
 _GARAGE_BASE = {
-    "klein": (250_000, 120.0),
-    "mittel": (600_000, 300.0),
-    "gross": (1_300_000, 650.0),
+    "small": (250_000, 120.0),
+    "medium": (600_000, 300.0),
+    "large": (1_300_000, 650.0),
 }
 GARAGE_SIZES = {
-    "klein": {"capacity": 3, "price": 250_000, "upkeep": 120.0, "label": "Klein (3 Busse)"},
-    "mittel": {"capacity": 8, "price": 600_000, "upkeep": 300.0, "label": "Mittel (8 Busse)"},
-    "gross": {"capacity": 20, "price": 1_300_000, "upkeep": 650.0, "label": "Groß (20 Busse)"},
+    "small": {"capacity": 3, "price": 250_000, "upkeep": 120.0, "label": "Klein (3 Busse)"},
+    "medium": {"capacity": 8, "price": 600_000, "upkeep": 300.0, "label": "Mittel (8 Busse)"},
+    "large": {"capacity": 20, "price": 1_300_000, "upkeep": 650.0, "label": "Groß (20 Busse)"},
 }
-SIZE_ORDER = ["klein", "mittel", "gross"]
+SIZE_ORDER = ["small", "medium", "large"]
 
 
-# Einstellbare Werte: (Schlüssel, Gruppe, Bezeichnung, Standard, Minimum, Maximum, Schritt, Einheit)
+# Adjustable values: (key, group, label, default, minimum, maximum, step, unit)
 TUNABLES = [
     ("rate_per_km", "Einnahmen", "Verdienst je gefahrenem km (Reisebus mit ca. 50 Sitzen)", 13.0, 1.0, 100.0, 0.5, "€/km"),
     ("tourist_min_ticket", "Einnahmen", "Mindestpreis pro Fahrgast bei Ausflügen", 15.0, 0.0, 500.0, 1.0, "€"),
@@ -117,7 +117,7 @@ TUNE_DEFAULTS = {t[0]: t[3] for t in TUNABLES}
 
 
 def apply_tuning(values: dict[str, float] | None = None) -> dict[str, float]:
-    """Setzt die Rechenwerte des Moduls. Fehlende Schlüssel nehmen den Standard."""
+    """Sets the calculation values of the module. Missing keys use the default."""
     global FARE_BASE, CONTRACT_RATE_PER_KM, TOURIST_MIN_TICKET, CONTRACT_BONUS, CONTRACT_CANCEL_FEE, FUEL_PRICE
     global MAINTENANCE_PER_KM, TOLL_PER_KM, INSURANCE_PER_DAY, WAGE_PER_HOUR, WAGE_PER_SKILL
     global SERVICE_COST_PER_POINT, TRAINING_COST, MODEL_PRICE_FACTOR, XP_PER_KM, SERVICE_THRESHOLD
@@ -156,7 +156,7 @@ def clean_name(name: str) -> str:
 
 
 def eur(value: float) -> str:
-    """12345.6 -> '12.346 €' (deutsche Schreibweise)."""
+    """12345.6 -> '12.346 €' (German notation)."""
     return f"{value:,.0f}".replace(",", ".") + " €"
 
 
@@ -165,18 +165,18 @@ def num(value: float) -> str:
 
 
 class CompanyError(Exception):
-    """Fehlermeldung für Nutzer (deutsch)."""
+    """Error message for the user (German)."""
 
 
 # --------------------------------------------------------------------------
-# Katalog (Strecken und Modelle aus dem Save)
+# Catalog (routes and models from the save)
 # --------------------------------------------------------------------------
 
 @dataclass
 class BusCatalog:
-    routes: dict[tuple[str, str], tuple[int, int]] = field(default_factory=dict)   # (von, nach) -> (km, min)
+    routes: dict[tuple[str, str], tuple[int, int]] = field(default_factory=dict)   # (from, to) -> (km, min)
     models: list[str] = field(default_factory=list)
-    contracts: list[dict] = field(default_factory=list)   # Vorlagen aus den Linienangeboten im Save
+    contracts: list[dict] = field(default_factory=list)   # templates from the line offers in the save
 
     @classmethod
     def from_doc(cls, doc) -> "BusCatalog":
@@ -213,7 +213,7 @@ class BusCatalog:
         self.routes.setdefault((b, a), (km, minutes))
 
     def estimate_leg(self, a: str, b: str) -> tuple[int, int]:
-        """Bekannte Etappe oder Schätzung aus der Luftlinie (km, Minuten)."""
+        """Known leg or an estimate from the straight-line distance (km, minutes)."""
         if (a, b) in self.routes:
             return self.routes[(a, b)]
         pa, pb = mapdata.coords(a), mapdata.coords(b)
@@ -257,7 +257,7 @@ class BusCatalog:
             raise CompanyError(f"Für {city_name(a)} – {city_name(b)} ist keine Strecke bekannt.") from None
 
     def hub_factor(self, city: str) -> float:
-        """Größere Knotenpunkte (viele Strecken) haben etwas mehr Nachfrage."""
+        """Larger hubs (many routes) have somewhat more demand."""
         count = sum(1 for (a, _) in self.routes if a == city)
         return 0.9 + 0.2 * min(1.0, count / 40)
 
@@ -283,7 +283,7 @@ def city_name(city: str) -> str:
 
 
 # --------------------------------------------------------------------------
-# Busmodelle (aus dem Namen abgeleitet, Werte geschätzt)
+# Bus models (derived from the name, values estimated)
 # --------------------------------------------------------------------------
 
 @dataclass(frozen=True)
@@ -324,7 +324,7 @@ def model_spec(name: str) -> ModelSpec:
 
 
 # --------------------------------------------------------------------------
-# Zustand
+# State
 # --------------------------------------------------------------------------
 
 @dataclass
@@ -337,7 +337,7 @@ class Driver:
     safety: int = 0
     km: int = 0
     bus_id: int | None = None
-    training: str | None = None      # Name des Skills, der gerade trainiert wird
+    training: str | None = None      # name of the skill that is currently being trained
     training_until: int = 0
     hired_at: int = 0
 
@@ -383,8 +383,8 @@ LAST_NAMES = ["Müller", "Kowalski", "Dubois", "Rossi", "Nowak", "Svensson", "Ga
 class Route:
     id: int
     name: str
-    stops: list[str]               # Start (Garagenstadt) zuerst; der Bus pendelt hin und zurück
-    kind: str = "linie"            # 'linie' oder 'ausflug'
+    stops: list[str]               # start (garage city) first; the bus shuttles back and forth
+    kind: str = "line"            # 'line' or 'excursion'
 
 
 @dataclass
@@ -392,15 +392,15 @@ class Contract:
     id: int
     name: str
     stops: list[str]
-    legs: list[list[int]]          # [km, Minuten] je Etappe der Hinfahrt
+    legs: list[list[int]]          # [km, minutes] per leg of the outbound trip
     pay_per_run: float
     bus_id: int
-    departures: list[int]          # alle geplanten Abfahrten (Spielminuten)
+    departures: list[int]          # all planned departures (game minutes)
     next_idx: int = 0
     done: int = 0
     missed: int = 0
     earned: float = 0.0
-    status: str = "läuft"          # läuft, abgeschlossen, abgebrochen
+    status: str = "running"          # running, completed, cancelled
 
     @property
     def total_km(self) -> int:
@@ -453,46 +453,46 @@ class Garage:
 class Bus:
     id: int
     model: str
-    home: str                      # Garage (Stadt)
-    destination: str | None = None  # Gegenstelle der Linie; None = nicht eingesetzt
-    at: str = ""                   # aktueller Endpunkt
+    home: str                      # garage (city)
+    destination: str | None = None  # other end of the line; None = not in service
+    at: str = ""                   # current end point
     condition: float = 100.0
-    next_free: int = 0             # Minute, ab der der Bus wieder abfahren kann
+    next_free: int = 0             # minute from which the bus can depart again
     km: int = 0
     trips: int = 0
     pax: int = 0
     revenue: float = 0.0
     costs: float = 0.0
     driver: int | None = None
-    route_id: int | None = None    # eigene Route (sonst: Pendel Garage – destination)
-    idx: int = 0                   # Position auf der eigenen Route
+    route_id: int | None = None    # own route (otherwise: shuttle garage – destination)
+    idx: int = 0                   # position on the own route
     dir: int = 1
     contract_id: int | None = None
-    segments: list = field(default_factory=list)   # Vertragsfahrt: [[von, nach, Start, Ende], ...]
-    trip_from: str = ""            # letzte Fahrt: Start, Ziel, Abfahrt und Ankunft (Minuten)
+    segments: list = field(default_factory=list)   # contract trip: [[from, to, start, end], ...]
+    trip_from: str = ""            # last trip: start, destination, departure and arrival (minutes)
     trip_to: str = ""
     trip_start: int = 0
     trip_end: int = 0
-    drive_day: int = -1            # Tag, für den drive_min gilt (Lenkzeit-Grenze)
-    drive_min: int = 0             # an diesem Tag schon gefahrene Minuten
+    drive_day: int = -1            # day for which drive_min applies (driving-time limit)
+    drive_min: int = 0             # minutes already driven on that day
 
 
 @dataclass
 class Settings:
     profit_multiplier: float = 1.0
     auto_service: bool = True
-    follow_game: bool = False      # Firma läuft nur, solange ETS2 läuft
-    auto_payout: bool = False      # beim Beenden von ETS2 automatisch in den neuesten Save auszahlen
-    reserve: int = 300_000         # Betrag, der bei der Auszahlung in der Kasse bleibt
-    game_speed: float = 1.0        # Simulationsminuten pro echter Sekunde (bei follow_game)
-    use_telemetry: bool = False    # echte Fahrten per Telemetrie verfolgen und Geld in die Firma geben
-    job_share: float = 1.0         # Anteil vom Auftragsverdienst, der in die Firmenkasse geht (1.0 = alles)
+    follow_game: bool = False      # company only runs while ETS2 is running
+    auto_payout: bool = False      # when ETS2 exits, pay out automatically into the newest save
+    reserve: int = 300_000         # amount that stays in the cash box at payout
+    game_speed: float = 1.0        # simulation minutes per real second (with follow_game)
+    use_telemetry: bool = False    # follow real trips via telemetry and give money to the company
+    job_share: float = 1.0         # share of the job income that goes into the company cash (1.0 = all)
     telemetry_url: str = "http://127.0.0.1:25555/api/ets2/telemetry"
-    overlay_on: bool = False       # Overlay über dem Spiel anzeigen
-    overlay_pos: str = ""          # "x,y" der letzten Position
-    respect_hours: bool = True     # An Zeiten halten: Lenkzeit pro Fahrer und Tag begrenzen (MAX_DRIVE_HOURS)
-    xp_per_trip: int = XP_PER_TRIP_MAX   # Bus-XP pro simulierter Fahrt (Obergrenze)
-    tuning: dict = field(default_factory=dict)   # Abweichungen von den Standardwerten (siehe TUNABLES)
+    overlay_on: bool = False       # show the overlay on top of the game
+    overlay_pos: str = ""          # "x,y" of the last position
+    respect_hours: bool = True     # keep to working hours: limit driving time per driver and day (MAX_DRIVE_HOURS)
+    xp_per_trip: int = XP_PER_TRIP_MAX   # bus XP per simulated trip (upper limit)
+    tuning: dict = field(default_factory=dict)   # deviations from the default values (see TUNABLES)
 
 
 @dataclass
@@ -514,7 +514,7 @@ class BusCompany:
         self.catalog = catalog
         self.name = clean_name(name)
         self.seed = seed
-        self.now = 0                    # Minuten seit Start (Tag 1, Montag 00:00)
+        self.now = 0                    # minutes since the start (day 1, Monday 00:00)
         self.cash = float(start_cash)
         self.start_cash = float(start_cash)
         self.garages: dict[str, Garage] = {}
@@ -524,18 +524,18 @@ class BusCompany:
         self.settings = Settings()
         self.apply_tuning()
         self.ledger: dict[int, dict[str, float]] = {}
-        self.fin: dict[int, dict[str, float]] = {}      # Tag -> Kategorie -> Betrag
+        self.fin: dict[int, dict[str, float]] = {}      # day -> category -> amount
         self.fin_total: dict[str, float] = {}
         self.log: list[tuple[int, str]] = []
         self.days_charged = 0
         self.total_paid_out = 0.0
         self.xp_total = 0
         self.xp_pending = 0
-        # Ein gemeinsames Konto: cash = geschätzter ETS2-Kontostand. sync_base = Kontostand beim letzten Abgleich
-        # mit dem Spielstand, game_earned = Verdienst echter Fahrten seit dann (steckt schon im Spiel).
+        # One shared account: cash = estimated ETS2 balance. sync_base = balance at the last sync
+        # with the save game, game_earned = income from real trips since then (already in the game).
         self.sync_base = float(start_cash)
         self.game_earned = 0.0
-        self.earned_at = 0.0          # Zeitpunkt (Unix) des letzten echten Verdiensts
+        self.earned_at = 0.0          # time (Unix) of the last real income
         self.totals = {"revenue": 0.0, "costs": 0.0, "pax": 0, "trips": 0, "xp": 0}
         self.trip_mark: dict | None = None
         self.trip_log: list[dict] = []
@@ -548,7 +548,7 @@ class BusCompany:
         self.next_driver_id = 1
         self.hired_keys: list[str] = []
 
-    # ---- Hilfen ---------------------------------------------------------
+    # ---- Helpers ---------------------------------------------------------
     def model(self, name: str) -> ModelSpec:
         return model_spec(name)
 
@@ -574,7 +574,7 @@ class BusCompany:
         return [b for b in self.buses.values() if b.home == city]
 
     def garage_drivers(self, city: str) -> list[Driver]:
-        """Fahrer, die einem Bus dieser Garage zugeteilt sind."""
+        """Drivers assigned to a bus of this garage."""
         out = []
         for bus in self.garage_buses(city):
             driver = self.drivers.get(bus.driver) if bus.driver else None
@@ -597,7 +597,7 @@ class BusCompany:
         return "bereit"
 
     def garage_stats(self, city: str) -> dict:
-        """Wirtschaftlichkeit einer Garage: Summen über alle Busse, die hier stehen."""
+        """Profitability of a garage: totals over all buses stationed here."""
         buses = self.garage_buses(city)
         g = self.garages[city]
         revenue = sum(b.revenue for b in buses)
@@ -615,9 +615,9 @@ class BusCompany:
             "avg_condition": sum(b.condition for b in buses) / len(buses) if buses else 0.0,
         }
 
-    # ---- Aktionen -------------------------------------------------------
+    # ---- Actions ---------------------------------------------------------
     def _book(self, day: int, cat: str, amount: float) -> None:
-        """Bucht Einnahme oder Ausgabe (immer positiv) in die Finanzübersicht."""
+        """Books income or expense (always positive) into the finance overview."""
         if not amount:
             return
         entry = self.fin.setdefault(day, {})
@@ -643,7 +643,7 @@ class BusCompany:
         if cat:
             self._book(self.now // DAY, cat, amount)
 
-    def build_garage(self, city: str, size: str = "klein") -> Garage:
+    def build_garage(self, city: str, size: str = "small") -> Garage:
         if size not in GARAGE_SIZES:
             raise CompanyError("Unbekannte Garagengröße.")
         if city not in self.catalog.cities():
@@ -708,22 +708,22 @@ class BusCompany:
             bus.destination = None
             self._log(f"Bus #{bus.id} aus dem Linienverkehr genommen.")
             return
-        self.catalog.route(bus.home, destination)  # prüft, ob es die Strecke gibt
+        self.catalog.route(bus.home, destination)  # checks that the route exists
         bus.destination = destination
         bus.at = bus.home
         bus.next_free = max(bus.next_free, self.now)
         self._log(f"Bus #{bus.id} fährt jetzt {city_name(bus.home)} – {city_name(destination)}.")
 
-    # ---- Eigene Routen ----------------------------------------------------
-    def create_route(self, name: str, stops: list[str], kind: str = "linie",
+    # ---- Own routes ----------------------------------------------------
+    def create_route(self, name: str, stops: list[str], kind: str = "line",
                      legs: list[tuple[int, int]] | None = None) -> Route:
-        """Legt eine eigene Route an. legs = (km, Minuten) je Etappe, sonst bekannt oder geschätzt."""
+        """Creates an own route. legs = (km, minutes) per leg, otherwise known or estimated."""
         name = name.strip()
         if not name:
             raise CompanyError("Bitte der Route einen Namen geben.")
         if any(r.name.lower() == name.lower() for r in self.routes.values()):
             raise CompanyError("Eine Route mit diesem Namen gibt es schon.")
-        if kind not in ("linie", "ausflug"):
+        if kind not in ("line", "excursion"):
             raise CompanyError("Die Art muss Linie oder Ausflug sein.")
         if not (2 <= len(stops) <= MAX_ROUTE_STOPS):
             raise CompanyError(f"Eine Route braucht 2 bis {MAX_ROUTE_STOPS} Haltestellen.")
@@ -778,7 +778,7 @@ class BusCompany:
         self._log(f"Bus #{bus.id} fährt jetzt die Route „{route.name}“.")
 
     def bus_stops(self, bus: Bus) -> list[str]:
-        """Haltestellen der Linie eines Busses (für Karte und Anzeige)."""
+        """Stops of the line of a bus (for the map and display)."""
         if bus.contract_id in self.contracts:
             return list(self.contracts[bus.contract_id].stops)
         if bus.route_id in self.routes:
@@ -792,9 +792,9 @@ class BusCompany:
             return self.routes[bus.route_id].name
         return f"{city_name(bus.home)} – {city_name(bus.destination)}" if bus.destination else "–"
 
-    # ---- Verträge ------------------------------------------------------------
+    # ---- Contracts -----------------------------------------------------------
     def contract_offers(self) -> list[ContractOffer]:
-        """Vertragsangebote dieser Woche (aus den Linienangeboten deines Saves, ab deinen Garagenstädten)."""
+        """This week's contract offers (from the line offers of your save, starting at your garage cities)."""
         week = self.now // (7 * DAY)
         rng = random.Random(f"{self.seed}:contracts:{week}")
         cities = set(self.catalog.cities())
@@ -844,13 +844,13 @@ class BusCompany:
 
     def cancel_contract(self, contract_id: int) -> float:
         contract = self.contracts.get(contract_id)
-        if contract is None or contract.status != "läuft":
+        if contract is None or contract.status != "running":
             raise CompanyError("Dieser Vertrag läuft nicht mehr.")
         remaining = len(contract.departures) - contract.next_idx
         fee = round(CONTRACT_CANCEL_FEE * remaining * contract.pay_per_run)
         self._pay(fee, "die Vertragsstrafe", "Vertragsstrafen")
         self._day(self.now // DAY)["costs"] += fee
-        contract.status = "abgebrochen"
+        contract.status = "cancelled"
         bus = self.buses.get(contract.bus_id)
         if bus is not None and bus.contract_id == contract.id:
             bus.contract_id, bus.segments = None, []
@@ -860,7 +860,7 @@ class BusCompany:
         return fee
 
     def _contract_step(self, bus: Bus, contract: Contract, report: Report) -> None:
-        """Fährt (oder verpasst) die nächste geplante Fahrt des Vertrags."""
+        """Runs (or misses) the next planned trip of the contract."""
         t0 = contract.departures[contract.next_idx]
         driver = self.drivers[bus.driver]
         self._update_training(driver, t0)
@@ -941,7 +941,7 @@ class BusCompany:
                 self._day(t0 // DAY)["revenue"] += bonus
                 self._book(t0 // DAY, "Verträge (inkl. Bonus)", bonus)
                 report.revenue += bonus
-            contract.status = "abgeschlossen"
+            contract.status = "completed"
             bus.contract_id = None
             bus.next_free = max(free, t0)
             self._log(f"Vertrag „{contract.name}“ abgeschlossen: {contract.done} Fahrten, {contract.missed} verpasst"
@@ -972,16 +972,16 @@ class BusCompany:
         self.name = clean_name(name)
 
     def pay_founding(self) -> None:
-        """Gründungskosten vom gemeinsamen Konto (wird beim Beenden von ETS2 in den Save geschrieben)."""
+        """Founding costs from the shared account (written into the save when ETS2 exits)."""
         self.cash -= FOUNDING_COST
         self._book(0, "Firmengründung", FOUNDING_COST)
         self._log(f"Firma gegründet ({eur(FOUNDING_COST)} Gründungskosten).")
 
     def apply_tuning(self) -> None:
-        """Stellt die Rechenwerte auf diese Firma ein und passt laufende Verträge dem aktuellen km-Satz an."""
+        """Sets the calculation values to this company and adjusts running contracts to the current km rate."""
         apply_tuning(self.settings.tuning)
         for ct in getattr(self, "contracts", {}).values():
-            if ct.status == "läuft":
+            if ct.status == "running":
                 ct.pay_per_run = round(ct.total_km * CONTRACT_RATE_PER_KM)
 
     def set_tuning(self, values: dict[str, float]) -> None:
@@ -1036,9 +1036,9 @@ class BusCompany:
         if auto_service is not None:
             self.settings.auto_service = bool(auto_service)
 
-    # ---- Fahrer -----------------------------------------------------------
+    # ---- Drivers -----------------------------------------------------------
     def candidates(self) -> list[Candidate]:
-        """Bewerber dieser Woche (wechseln jede Spielwoche, schon eingestellte fehlen)."""
+        """This week's applicants (they change every game week, those already hired are missing)."""
         week = self.now // (7 * DAY)
         rng = random.Random(f"{self.seed}:cand:{week}")
         out = []
@@ -1078,7 +1078,7 @@ class BusCompany:
         self._log(f"{driver.name} entlassen.")
 
     def assign_driver(self, driver_id: int, bus_id: int | None) -> None:
-        """Setzt den Fahrer auf einen Bus (None = vom Bus nehmen). Ein Bus hat einen Fahrer."""
+        """Puts the driver on a bus (None = take off the bus). A bus has one driver."""
         driver = self._driver(driver_id)
         if driver.bus_id is not None and driver.bus_id in self.buses:
             self.buses[driver.bus_id].driver = None
@@ -1124,9 +1124,9 @@ class BusCompany:
     def driver_bus_label(self, driver: Driver) -> str:
         return f"Bus #{driver.bus_id}" if driver.bus_id is not None else "frei"
 
-    # ---- Position (für die Karte) ------------------------------------------
+    # ---- Position (for the map) ------------------------------------------
     def bus_state(self, bus: Bus) -> tuple[str, str, float, str]:
-        """(von, nach, Anteil 0..1, Status) – Status: 'unterwegs', 'wartet', 'steht'."""
+        """(from, to, share 0..1, status) – status: 'unterwegs' (on the way), 'wartet' (waiting), 'steht' (standing)."""
         for seg in bus.segments:
             if seg[2] <= self.now < seg[3]:
                 return seg[0], seg[1], (self.now - seg[2]) / max(1, seg[3] - seg[2]), "unterwegs"
@@ -1137,15 +1137,15 @@ class BusCompany:
         active = bus.destination or bus.contract_id in self.contracts
         return place, place, 0.0, "wartet" if active else "steht"
 
-    # ---- Gemeinsames Konto ------------------------------------------------
+    # ---- Shared account ---------------------------------------------------
     def firm_delta(self) -> float:
-        """Änderung des ETS2-Kontos durch die Firma (Gewinn, Käufe, Kosten). Verdienst echter Fahrten
-        ist schon im Spiel und zählt hier nicht."""
+        """Change of the ETS2 account caused by the company (profit, purchases, costs). Income from real trips
+        is already in the game and does not count here."""
         return self.cash - self.sync_base - self.game_earned
 
     def sync_to_game(self, money: float, save_mtime: float | None = None) -> None:
-        """Gleicht mit dem Kontostand eines Spielstands ab. Noch nicht geschriebene Firmenänderungen bleiben.
-        Ist der Save älter als der letzte echte Verdienst, steckt der noch nicht darin: dann bleibt er erhalten."""
+        """Syncs with the balance of a save game. Company changes not yet written are kept.
+        If the save is older than the last real income, that income is not in it yet: then it is kept."""
         delta = self.firm_delta()
         keep = self.game_earned if (save_mtime is not None and save_mtime < self.earned_at) else 0.0
         self.sync_base = float(money)
@@ -1153,12 +1153,12 @@ class BusCompany:
         self.cash = float(money) + delta + keep
 
     def reset_to_game(self, money: float) -> None:
-        """Konto und Firmen-Datei komplett auf den Stand eines Spielstands setzen (nichts Offenes bleibt)."""
+        """Sets account and company file completely to the state of a save game (nothing pending remains)."""
         self.cash = self.sync_base = float(money)
         self.game_earned = 0.0
 
     def mark_written(self, written: float, new_money: float, xp: int = 0) -> None:
-        """Nach erfolgreichem Schreiben in den Spielstand: Firmenänderung (written) gilt als übertragen."""
+        """After successfully writing into the save game: the company change (written) counts as transferred."""
         self.xp_pending -= xp
         self.total_paid_out += written
         self.cash = float(new_money)
@@ -1182,7 +1182,7 @@ class BusCompany:
             if bus is None or bus.driver not in self.drivers:
                 continue
             contract = self.contracts.get(bus.contract_id) if bus.contract_id is not None else None
-            if contract is not None and contract.status == "läuft":
+            if contract is not None and contract.status == "running":
                 self._contract_step(bus, contract, report)
                 heapq.heappush(heap, (bus.next_free, bus.id))
                 continue
@@ -1190,12 +1190,12 @@ class BusCompany:
                 continue
             driver = self.drivers[bus.driver]
             self._update_training(driver, when)
-            if driver.training:                # Fahrer ist in der Weiterbildung: Bus wartet
+            if driver.training:                # driver is in training: bus waits
                 bus.next_free = driver.training_until
                 heapq.heappush(heap, (bus.next_free, bus.id))
                 continue
             allowed = self._operating(when)
-            if allowed != when:          # nachts nicht losfahren: auf 05:00 Uhr verschieben
+            if allowed != when:          # do not depart at night: postpone to 05:00
                 bus.next_free = allowed
                 heapq.heappush(heap, (allowed, bus.id))
                 continue
@@ -1211,16 +1211,16 @@ class BusCompany:
         self.totals["trips"] += report.trips
         return report
 
-    # ---- Echte Fahrten (Telemetrie) ------------------------------------------
+    # ---- Real trips (telemetry) ------------------------------------------
     def begin_trip(self) -> None:
-        """Merkt sich den Firmenstand beim Start einer echten Fahrt."""
+        """Remembers the company state at the start of a real trip."""
         self.trip_mark = {"cash": self.cash, "xp": self.xp_total, **{k: v for k, v in self.totals.items()}}
 
     def cancel_trip(self) -> None:
         self.trip_mark = None
 
     def trip_delta(self) -> dict:
-        """Was die Firma seit Fahrtbeginn gemacht hat."""
+        """What the company has done since the start of the trip."""
         mark = self.trip_mark or {"revenue": self.totals["revenue"], "costs": self.totals["costs"],
                                   "pax": self.totals["pax"], "trips": self.totals["trips"], "xp": self.xp_total}
         return {
@@ -1232,13 +1232,13 @@ class BusCompany:
         }
 
     def complete_trip(self, income: int, source: str, dest: str, cargo: str, km: float, vehicle: str = "") -> dict:
-        """Echte Fahrt abgeliefert: Verdienst aufs gemeinsame Konto, Fahrtbericht anlegen."""
+        """Real trip delivered: income onto the shared account, create the trip report."""
         if income < 0:
             raise CompanyError("Der Auftragsverdienst darf nicht negativ sein.")
         delta = self.trip_delta()
         share = int(income)
         cash_before = self.cash
-        self.cash += income              # der Verdienst ist im Spiel schon auf dem Konto
+        self.cash += income              # the income is already on the account in the game
         self.game_earned += income
         self.earned_at = time.time()
         self._book(self.now // DAY, "Echte Fahrten (schon im Spiel)", income)
@@ -1257,9 +1257,9 @@ class BusCompany:
         return report
 
     def _miss_without_driver(self, target: int) -> None:
-        """Vertragsfahrten, für die der Bus keinen Fahrer hat, gelten als verpasst."""
+        """Contract trips for which the bus has no driver count as missed."""
         for contract in self.contracts.values():
-            if contract.status != "läuft":
+            if contract.status != "running":
                 continue
             bus = self.buses.get(contract.bus_id)
             if bus is not None and bus.driver in self.drivers:
@@ -1271,7 +1271,7 @@ class BusCompany:
                 self._log(f"Vertragsfahrt „{contract.name}“ verpasst: der Bus hat keinen Fahrer.",
                           contract.departures[contract.next_idx - 1])
             if contract.next_idx >= len(contract.departures):
-                contract.status = "abgeschlossen"
+                contract.status = "completed"
                 if bus is not None:
                     bus.contract_id = None
                 self._log(f"Vertrag „{contract.name}“ abgeschlossen: {contract.done} Fahrten, {contract.missed} verpasst.")
@@ -1305,7 +1305,7 @@ class BusCompany:
 
     def _maintain(self, bus: Bus, driver: Driver, rng: random.Random, km: int, t0: int, arrival: int,
                   free: int, label: str) -> tuple[float, int]:
-        """Verschleiß, Panne oder automatische Wartung. Gibt (Zusatzkosten, neue Freizeit des Busses) zurück."""
+        """Wear, breakdown or automatic service. Returns (extra costs, new free time of the bus)."""
         bus.condition = max(0.0, bus.condition - km * 0.008 * (1 - 0.07 * driver.safety))
         extra = 0.0
         if bus.condition < BREAKDOWN_BELOW and rng.random() < 0.10 * (1 - 0.15 * driver.safety):
@@ -1342,7 +1342,7 @@ class BusCompany:
         day, tod = divmod(t0, DAY)
         weekday = day % 7
         hour = tod / 60
-        if tourist:      # Ausflügler fahren vor allem am Wochenende und tagsüber
+        if tourist:      # day-trippers mostly travel at weekends and during the day
             weekday_factor = {5: 1.3, 6: 1.3, 4: 1.0}.get(weekday, 0.85)
             hour_factor = 1.0 if 8 <= hour < 16 else 0.8
         else:
@@ -1386,7 +1386,7 @@ class BusCompany:
         if bus.drive_day != day_t0:
             bus.drive_day, bus.drive_min = day_t0, 0
         bus.drive_min += drive_minutes
-        if self.settings.respect_hours and bus.drive_min >= MAX_DRIVE_HOURS * 60:           # Lenkzeit erreicht: der Bus ruht bis zum nächsten Morgen
+        if self.settings.respect_hours and bus.drive_min >= MAX_DRIVE_HOURS * 60:           # driving time reached: the bus rests until the next morning
             free = max(free, (day_t0 + 1) * DAY + OPERATING_START)
         free = self._operating(free)
 
@@ -1423,7 +1423,7 @@ class BusCompany:
         report.km += km
         report.pax += pax
 
-    # ---- Auswertung -----------------------------------------------------
+    # ---- Evaluation ------------------------------------------------------
     def day_stats(self, day: int) -> dict[str, float]:
         return dict(self.ledger.get(day, {"revenue": 0.0, "costs": 0.0, "trips": 0, "pax": 0, "km": 0}))
 
@@ -1438,7 +1438,7 @@ class BusCompany:
     def active_buses(self) -> int:
         return sum(1 for b in self.buses.values() if b.destination)
 
-    # ---- Speichern/Laden ------------------------------------------------
+    # ---- Saving/loading --------------------------------------------------
     def to_dict(self) -> dict:
         return {
             "version": STATE_VERSION,
@@ -1493,7 +1493,7 @@ class BusCompany:
         if "sync_base" in data:
             company.sync_base = float(data["sync_base"])
             company.game_earned = float(data.get("game_earned", 0.0))
-        else:        # alter Stand mit getrennter Kasse: ungezahlter Gewinn bleibt als Änderung erhalten
+        else:        # old state with separate cash: unpaid profit is kept as a change
             pending = max(0.0, company.cash - company.start_cash - float(data.get("game_debit", 0)))
             company.sync_base = company.cash - pending
         company.totals.update(data.get("totals", {}))
@@ -1501,19 +1501,24 @@ class BusCompany:
         company.trip_log = list(data.get("trip_log", []))
         company.settings = Settings(**data["settings"])
         company.apply_tuning()
-        if company.settings.job_share == 0.25:      # alter Standardwert: jetzt geht der ganze Verdienst in die Firma
+        if company.settings.job_share == 0.25:      # old default value: now all the income goes into the company
             company.settings.job_share = 1.0
-        company.garages = {g["city"]: Garage(g["city"], g["size"]) for g in data["garages"]}
+        old_sizes = {"klein": "small", "mittel": "medium", "gross": "large"}      # German values of older versions
+        company.garages = {g["city"]: Garage(g["city"], old_sizes.get(g["size"], g["size"])) for g in data["garages"]}
         company.buses = {int(b["id"]): Bus(**b) for b in data["buses"]}
         company.drivers = {int(d["id"]): Driver(**d) for d in data.get("drivers", [])}
         company.next_driver_id = int(data.get("next_driver_id", 1))
         company.routes = {int(r["id"]): Route(**r) for r in data.get("routes", [])}
+        for r in company.routes.values():
+            r.kind = {"linie": "line", "ausflug": "excursion"}.get(r.kind, r.kind)
         company.next_route_id = int(data.get("next_route_id", 1))
         company.contracts = {int(c["id"]): Contract(**c) for c in data.get("contracts", [])}
+        for ct in company.contracts.values():
+            ct.status = {"läuft": "running", "abgeschlossen": "completed", "abgebrochen": "cancelled"}.get(ct.status, ct.status)
         company.next_contract_id = int(data.get("next_contract_id", 1))
         company.accepted_offers = list(data.get("accepted_offers", []))
         company.hired_keys = list(data.get("hired_keys", []))
-        if "drivers" not in data:        # alter Stand ohne Fahrer: jedem Bus einen Fahrer geben
+        if "drivers" not in data:        # old state without drivers: give every bus a driver
             for bus in company.buses.values():
                 driver = Driver(company.next_driver_id, f"Fahrer {company.next_driver_id}", bus_id=bus.id,
                                 hired_at=company.now)
@@ -1524,7 +1529,7 @@ class BusCompany:
         company.fin = {int(d): dict(e) for d, e in data.get("fin", {}).items()}
         company.fin_total = dict(data.get("fin_total", {}))
         company.log = [(int(t), str(s)) for t, s in data["log"]]
-        company.apply_tuning()          # laufende Verträge auf den aktuellen km-Satz setzen
+        company.apply_tuning()          # set running contracts to the current km rate
         return company
 
     def save(self, path: str) -> None:
@@ -1550,7 +1555,7 @@ class BusCompany:
 
 def estimate_trip_profit(model_name: str, km: int, minutes: int, multiplier: float = 1.0,
                          tourist: bool = False) -> float:
-    """Grobe Schätzung des Gewinns einer Fahrt (einfache Strecke) auf dieser Route, ohne Versicherung."""
+    """Rough estimate of the profit of one trip (single leg) on this route, excluding insurance."""
     spec = model_spec(model_name)
     load = min(1.0, (0.70 if tourist else BusCompany._demand_base(km)) * 0.97)
     pax = spec.seats * load
@@ -1566,7 +1571,7 @@ def estimate_trip_profit(model_name: str, km: int, minutes: int, multiplier: flo
 
 def estimate_daily_profit(model_name: str, km: int, minutes: int, multiplier: float = 1.0,
                           tourist: bool = False, respect_hours: bool = True) -> float:
-    """Grobe Schätzung des Gewinns pro Bus und Tag auf einer Strecke."""
+    """Rough estimate of the profit per bus and day on a route."""
     trips = (DAY - OPERATING_START) / (minutes + (TOURIST_DWELL if tourist else TURNAROUND) + 10)
     if respect_hours:
         trips = min(trips, MAX_DRIVE_HOURS * 60 / max(1, minutes))
@@ -1579,7 +1584,7 @@ def default_state_path() -> str:
         return override
     folder = os.path.join(os.path.expanduser("~"), ".ets2_save_tool")
     path = os.path.join(folder, "company.json")
-    legacy = os.path.join(folder, "busfirma.json")          # frühere Dateinamen: einmalig umbenennen
+    legacy = os.path.join(folder, "busfirma.json")          # earlier file names: rename once
     for suffix in ("", ".bak"):
         if not os.path.exists(path + suffix) and os.path.exists(legacy + suffix):
             try:

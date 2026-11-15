@@ -1,9 +1,9 @@
-"""Lesen, Entschlüsseln, Parsen und Schreiben von ETS2/ATS-Savegames (game.sii).
+"""Reading, decrypting, parsing and writing ETS2/ATS save games (game.sii).
 
-Format (verifiziert am Quellcode von SII_Decrypt):
-  verschlüsselt:  "ScsC" | HMAC (32) | IV (16) | Datengröße (uint32 LE) | AES-256-CBC(zlib(Text))
-  Klartext:       "SiiN" ... (SiiNunit { ... })
-  nicht unterstützt: "BSII" (Binärformat) und "3nK\\x01"
+Format (verified against the source code of SII_Decrypt):
+  encrypted:  "ScsC" | HMAC (32) | IV (16) | data size (uint32 LE) | AES-256-CBC(zlib(text))
+  plain text: "SiiN" ... (SiiNunit { ... })
+  not supported: "BSII" (binary format) and "3nK\\x01"
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ HEADER_SIZE = 4 + 32 + 16 + 4
 
 
 class SiiError(Exception):
-    """Basisklasse für alle Fehler dieses Moduls (Meldung ist für Nutzer gedacht)."""
+    """Base class for all errors of this module (the message is meant for the user)."""
 
 
 class UnsupportedFormat(SiiError):
@@ -40,7 +40,7 @@ class UnsupportedFormat(SiiError):
 
 
 # --------------------------------------------------------------------------
-# Ver-/Entschlüsselung
+# Encryption/decryption
 # --------------------------------------------------------------------------
 
 def _aes_cbc(data: bytes, iv: bytes, encrypt: bool) -> bytes:
@@ -62,7 +62,7 @@ def _aes_cbc(data: bytes, iv: bytes, encrypt: bool) -> bytes:
 
 
 def decrypt_bytes(raw: bytes) -> bytes:
-    """Gibt den Klartext-Inhalt einer Save-Datei zurück (egal ob verschlüsselt oder nicht)."""
+    """Returns the plain-text content of a save file (whether encrypted or not)."""
     sig = raw[:4]
     if sig == SIG_ENCRYPTED:
         if len(raw) < HEADER_SIZE:
@@ -99,7 +99,7 @@ def decrypt_bytes(raw: bytes) -> bytes:
 
 
 def encrypt_text(plain: bytes) -> bytes:
-    """Verschlüsselt Klartext im ScsC-Format (wird nur für Tests und optionalen Export genutzt)."""
+    """Encrypts plain text in the ScsC format (only used for tests and optional export)."""
     iv = os.urandom(16)
     comp = zlib.compress(plain)
     pad = (-len(comp)) % 16
@@ -119,8 +119,8 @@ _ATTR_RE = re.compile(r"^\s*([A-Za-z_]\w*(?:\[\d*\])?)\s*:\s?(.*)$")
 class Unit:
     type: str
     name: str
-    start: int  # Index der Kopfzeile "typ : name {"
-    end: int    # Index der schließenden "}"
+    start: int  # index of the header line "type : name {"
+    end: int    # index of the closing "}"
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"Unit({self.type} : {self.name})"
@@ -134,7 +134,7 @@ class SiiDocument:
     by_name: dict[str, Unit] = field(default_factory=dict)
     by_type: dict[str, list[Unit]] = field(default_factory=dict)
 
-    # ---- Aufbau ---------------------------------------------------------
+    # ---- Structure ------------------------------------------------------
     @classmethod
     def from_bytes(cls, plain: bytes) -> "SiiDocument":
         text = plain.decode("utf-8", errors="surrogateescape")
@@ -168,7 +168,7 @@ class SiiDocument:
                 f"Die Datei ist unvollständig (Unit '{current.name}' wird nicht geschlossen)."
             )
 
-    # ---- Lesen ----------------------------------------------------------
+    # ---- Reading --------------------------------------------------------
     def first(self, unit_type: str) -> Unit | None:
         found = self.by_type.get(unit_type)
         return found[0] if found else None
@@ -186,7 +186,7 @@ class SiiDocument:
         return default
 
     def get_array(self, unit: Unit, key: str) -> list[str]:
-        """Liest 'key: N' mit den Zeilen 'key[0]: ...'."""
+        """Reads 'key: N' with the lines 'key[0]: ...'."""
         out: dict[int, str] = {}
         prefix = key + "["
         for _, k, v in self.attrs(unit):
@@ -197,9 +197,9 @@ class SiiDocument:
                     continue
         return [out[i] for i in sorted(out)]
 
-    # ---- Schreiben ------------------------------------------------------
+    # ---- Writing --------------------------------------------------------
     def set(self, unit: Unit, key: str, value: str) -> None:
-        """Ändert ein vorhandenes Attribut oder fügt es vor der schließenden '}' ein."""
+        """Changes an existing attribute or inserts it before the closing '}'."""
         for i, k, _ in self.attrs(unit):
             if k == key:
                 self.lines[i] = f" {key}: {value}"
@@ -211,10 +211,10 @@ class SiiDocument:
         self.set(unit, f"{key}[{index}]", value)
 
     def replace_array(self, unit: Unit, key: str, values: list[str]) -> None:
-        """Ersetzt ein Array komplett: 'key: N' und alle 'key[i]: ...'-Zeilen.
+        """Replaces an array completely: 'key: N' and all 'key[i]: ...' lines.
 
-        Steht das Array schon in der Unit, bleiben die neuen Zeilen an derselben Stelle,
-        sonst werden sie vor der schließenden '}' eingefügt.
+        If the array is already in the unit, the new lines stay in the same place,
+        otherwise they are inserted before the closing '}'.
         """
         prefix = key + "["
         positions = [
@@ -232,7 +232,7 @@ class SiiDocument:
 
 
 # --------------------------------------------------------------------------
-# Datei-Ebene
+# File level
 # --------------------------------------------------------------------------
 
 def load(path: str) -> SiiDocument:
@@ -257,10 +257,10 @@ def make_backup(path: str) -> str:
 
 
 def save(doc: SiiDocument, path: str, backup: bool = True) -> str | None:
-    """Schreibt den Save als Klartext (das Spiel liest Klartext-Saves ohne Probleme).
+    """Writes the save as plain text (the game reads plain-text saves without problems).
 
-    Gibt den Pfad des Backups zurück (oder None). Das Original wird erst nach dem
-    Backup und über eine temporäre Datei ersetzt.
+    Returns the path of the backup (or None). The original is only replaced after the
+    backup and via a temporary file.
     """
     backup_path = make_backup(path) if backup and os.path.exists(path) else None
     tmp = path + ".tmp_write"

@@ -1,4 +1,4 @@
-"""Erkennt, ob ETS2 läuft, und zahlt nach dem Beenden in den neuesten Spielstand aus."""
+"""Detects whether ETS2 is running and pays out into the newest save game after it exits."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def is_game_running() -> bool:
         try:
             out = subprocess.run(
                 ["tasklist", "/FO", "CSV", "/NH"], capture_output=True, text=True, timeout=10,
-                creationflags=0x08000000,  # kein Konsolenfenster
+                creationflags=0x08000000,  # no console window
             ).stdout.lower()
         except (OSError, subprocess.SubprocessError):
             return False
@@ -51,7 +51,7 @@ def newest_save() -> saves.SaveEntry | None:
 
 
 def wait_until_stable(path: str, quiet_seconds: float = 3.0, timeout: float = 60.0) -> bool:
-    """Wartet, bis die Datei sich eine Weile nicht mehr ändert (das Spiel schreibt beim Beenden noch)."""
+    """Waits until the file has not changed for a while (the game still writes when exiting)."""
     deadline = time.time() + timeout
     last = None
     since = time.time()
@@ -72,7 +72,7 @@ def wait_until_stable(path: str, quiet_seconds: float = 3.0, timeout: float = 60
 @dataclass
 class PayoutResult:
     path: str
-    euros: int          # Änderung des Kontos durch die Firma (kann negativ sein)
+    euros: int          # change of the account by the company (can be negative)
     xp: int
     new_money: int
     backup: str | None
@@ -80,7 +80,7 @@ class PayoutResult:
 
 
 def payout_amounts(company: busco.BusCompany) -> tuple[int, int]:
-    """(Änderung des Kontos durch die Firma, verdiente Bus-XP)"""
+    """(change of the account by the company, bus XP earned)"""
     return int(round(company.firm_delta())), int(company.xp_pending)
 
 
@@ -91,7 +91,7 @@ def read_money(path: str) -> int | None:
 
 
 def sync_company(company: busco.BusCompany) -> int | None:
-    """Gleicht das gemeinsame Konto mit dem neuesten Spielstand ab (nur sinnvoll, wenn ETS2 nicht läuft)."""
+    """Syncs the shared account with the newest save game (only useful when ETS2 is not running)."""
     entry = newest_save()
     if entry is None:
         return None
@@ -106,7 +106,7 @@ def sync_company(company: busco.BusCompany) -> int | None:
 
 
 def payout_into_save(company: busco.BusCompany, path: str) -> PayoutResult | None:
-    """Schreibt die Firmenänderung am Konto und die verdienten Bus-XP in game.sii. None = nichts zu schreiben."""
+    """Writes the company change of the account and the bus XP earned into game.sii. None = nothing to write."""
     delta, xp = payout_amounts(company)
     if delta == 0 and xp == 0:
         return None

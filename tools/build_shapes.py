@@ -1,5 +1,5 @@
-"""Erzeugt roadhub/europe_shapes.json aus Natural Earth 110m (gemeinfrei).
-Aufruf: build_shapes.py <naturalearth_lowres.shp>   (liegt z. B. im geopandas-0.14-Paket)"""
+"""Creates roadhub/europe_shapes.json from Natural Earth 110m (public domain).
+Usage: build_shapes.py <naturalearth_lowres.shp>   (e.g. part of the geopandas-0.14 package)"""
 import json, sys
 import shapefile
 

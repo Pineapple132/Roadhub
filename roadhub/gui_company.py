@@ -1,4 +1,4 @@
-"""Seiten der Busfirma: Übersicht (Zeitraffer), Garagen und Busse."""
+"""Pages of the bus company: overview (fast-forward), garages and buses."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ class _Page(ttk.Frame):
 
 
 # --------------------------------------------------------------------------
-# Übersicht
+# Overview
 # --------------------------------------------------------------------------
 
 class OverviewPage(_Page):
@@ -51,7 +51,7 @@ class OverviewPage(_Page):
         self._last_save_tick = 0
         self._tick_count = 0
 
-        # Platzhalter, solange es keine Firma gibt
+        # placeholder while there is no company
         self.empty = ttk.Frame(self)
         ttk.Label(self.empty, text="Noch keine Busfirma", style="Head.TLabel").pack(anchor="w")
         ttk.Label(
@@ -80,7 +80,7 @@ class OverviewPage(_Page):
         self._build_main()
         self.refresh()
 
-    # ---- Aufbau -----------------------------------------------------------
+    # ---- Layout -----------------------------------------------------------
     def _build_main(self) -> None:
         m = self.main
         grid = ttk.Frame(m)
@@ -174,7 +174,7 @@ class OverviewPage(_Page):
                    command=self.shell.start_payout).pack(side="left")
         ttk.Button(bottom, text="Neue Firma …", command=self.shell.new_company).pack(side="right")
 
-    # ---- Steuerung --------------------------------------------------------
+    # ---- Controls --------------------------------------------------------
     def _speed_minutes(self) -> int:
         return SPEEDS[max(0, self.speed.current())][1]
 
@@ -230,14 +230,14 @@ class OverviewPage(_Page):
             self.game_state.config(text="ETS2 läuft nicht: Die Firma pausiert.")
 
     def _effective(self) -> tuple[bool, int]:
-        """(läuft?, Simulationsminuten pro echter Sekunde)"""
+        """(running?, simulation minutes per real second)"""
         company = self.company
         if company is not None and company.settings.follow_game:
             return self.shell.game_running, company.settings.game_speed
         return self.running, self._speed_minutes()
 
     def tick(self) -> None:
-        """Wird vom Hauptfenster alle 100 ms aufgerufen."""
+        """Called by the main window every 100 ms."""
         company = self.company
         if company is None:
             return
@@ -257,7 +257,7 @@ class OverviewPage(_Page):
             if self._tick_count % 300 == 0:
                 self.shell.save_company()
 
-    # ---- Anzeige ------------------------------------------------------------
+    # ---- Display ------------------------------------------------------------
     def refresh(self) -> None:
         company = self.company
         if company is None:
@@ -345,7 +345,7 @@ def _short_eur(value: float) -> str:
 
 
 # --------------------------------------------------------------------------
-# Garagen
+# Garages
 # --------------------------------------------------------------------------
 
 class GaragesPage(_Page):
@@ -366,7 +366,7 @@ class GaragesPage(_Page):
         wrap.pack(fill="x", pady=(10, 8))
         self.tree.bind("<<TreeviewSelect>>", lambda e: self._detail())
 
-        # Wirtschaftlichkeit der gewählten Garage
+        # profitability of the selected garage
         self.detail_title = ttk.Label(self, text="", style="Head.TLabel")
         self.detail_title.pack(anchor="w")
         grid = ttk.Frame(self)
@@ -503,7 +503,7 @@ class BuildGarageDialog(Dialog):
         self.city.bind("<<ComboboxSelected>>", lambda e: self._info())
         self.city.bind("<FocusOut>", lambda e: self._info())
         ttk.Label(self.body, text="Größe").grid(row=1, column=0, sticky="nw", pady=5)
-        self.size_var = tk.StringVar(value="klein")
+        self.size_var = tk.StringVar(value="small")
         box = ttk.Frame(self.body)
         box.grid(row=1, column=1, sticky="w", padx=12)
         for key in busco.SIZE_ORDER:
@@ -545,7 +545,7 @@ class BuildGarageDialog(Dialog):
 
 
 # --------------------------------------------------------------------------
-# Busse
+# Buses
 # --------------------------------------------------------------------------
 
 class BusesPage(_Page):
@@ -729,7 +729,7 @@ class AssignRouteDialog(Dialog):
                 leg = company.catalog.routes.get((x, y))
                 if leg:
                     km, mins = km + leg[0], mins + leg[1]
-            self.custom.append((f"route:{r.id}", r.name, "Ausflug" if r.kind == "ausflug" else "Eigene Linie", km, mins))
+            self.custom.append((f"route:{r.id}", r.name, "Ausflug" if r.kind == "excursion" else "Eigene Linie", km, mins))
         self._fill()
 
     def _fill(self) -> None:

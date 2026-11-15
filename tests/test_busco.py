@@ -32,7 +32,7 @@ def hire(c):
 
 def company(cash=5_000_000, buses=3, dest="city.b", model=MODEL_DD, **kw):
     c = BusCompany(catalog(), cash, seed=7, **kw)
-    c.build_garage("city.a", "mittel")
+    c.build_garage("city.a", "medium")
     for _ in range(buses):
         bus = c.buy_bus("city.a", model)
         c.assign_route(bus.id, dest)
@@ -40,7 +40,7 @@ def company(cash=5_000_000, buses=3, dest="city.b", model=MODEL_DD, **kw):
     return c
 
 
-# ---- Modelle / Katalog ------------------------------------------------------
+# ---- Models / catalog ------------------------------------------------------
 
 def test_model_specs_from_real_names():
     dd = busco.model_spec(MODEL_DD)
@@ -48,37 +48,37 @@ def test_model_specs_from_real_names():
     lions = busco.model_spec(MODEL_A)
     assert lions.seats == round(13.9 * 3.9) and "MAN" in lions.label and lions.price > 200_000
     odd = busco.model_spec("irgendwas")
-    assert odd.seats == round(12.5 * 3.9) and odd.price > 0       # Rückfallwerte
+    assert odd.seats == round(12.5 * 3.9) and odd.price > 0       # fallback values
 
 
 def test_catalog_from_doc_and_roundtrip():
     doc = sii.SiiDocument.from_bytes(make_save_text().encode())
     cat = BusCatalog.from_doc(doc)
     assert cat.routes[("city.zurich", "city.bern")] == (116, 100)
-    assert cat.routes[("city.bern", "city.zurich")] == (116, 100)       # Rückrichtung ergänzt
-    assert cat.routes[("city.bern", "city.basel")] == (90, 80)          # zweite Etappe
+    assert cat.routes[("city.bern", "city.zurich")] == (116, 100)       # return direction added
+    assert cat.routes[("city.bern", "city.basel")] == (90, 80)          # second leg
     assert MODEL_A in cat.models
     again = BusCatalog.from_dict(json.loads(json.dumps(cat.to_dict())))
     assert again.routes == cat.routes and again.models == cat.models
     assert [d for d, *_ in cat.destinations("city.bern")] == ["city.basel", "city.zurich"]
 
 
-# ---- Aktionen und Fehler ------------------------------------------------------
+# ---- Actions and errors ------------------------------------------------------
 
 def test_purchases_pay_and_validate():
     c = BusCompany(catalog(), 3_000_000, seed=1)
     with pytest.raises(CompanyError):
-        c.buy_bus("city.a", MODEL_A)                      # keine Garage
-    c.build_garage("city.a", "klein")
+        c.buy_bus("city.a", MODEL_A)                      # no garage
+    c.build_garage("city.a", "small")
     assert c.cash == 3_000_000 - 250_000
     with pytest.raises(CompanyError):
-        c.build_garage("city.a", "klein")                 # doppelt
+        c.build_garage("city.a", "small")                 # duplicate
     with pytest.raises(CompanyError):
-        c.build_garage("city.zzz", "klein")               # keine Strecken dort
+        c.build_garage("city.zzz", "small")               # no routes there
     for _ in range(3):
         c.buy_bus("city.a", MODEL_A)
     with pytest.raises(CompanyError):
-        c.buy_bus("city.a", MODEL_A)                      # Garage voll
+        c.buy_bus("city.a", MODEL_A)                      # garage full
     c.upgrade_garage("city.a")
     c.buy_bus("city.a", MODEL_A)
     with pytest.raises(CompanyError):
@@ -89,7 +89,7 @@ def test_not_enough_money_changes_nothing():
     c = BusCompany(catalog(), 100_000, seed=1)
     before = c.to_dict()
     with pytest.raises(CompanyError, match="fehlt Geld") as exc:
-        c.build_garage("city.a", "klein")
+        c.build_garage("city.a", "small")
     assert "250.000 €, auf deinem Konto sind 100.000 €" in str(exc.value)
     assert c.to_dict() == before
 
@@ -120,7 +120,7 @@ def test_deterministic_independent_of_chunking():
     da, db, dd = a.to_dict(), b.to_dict(), d.to_dict()
     ta, tb, td = da.pop("totals"), db.pop("totals"), dd.pop("totals")
     assert da == db == dd
-    for k in ta:                       # Summen: nur die Reihenfolge der Gleitkomma-Addition unterscheidet sich
+    for k in ta:                       # totals: only the order of the floating-point addition differs
         assert abs(ta[k] - tb[k]) < 1e-6 and abs(ta[k] - td[k]) < 1e-6
 
 
@@ -136,7 +136,7 @@ def test_cash_equals_ledger_and_purchases():
 
 def test_idle_company_only_pays_daily_costs():
     c = BusCompany(catalog(), 1_000_000, seed=1)
-    c.build_garage("city.a", "klein")
+    c.build_garage("city.a", "small")
     cash = c.cash
     c.advance(3 * DAY)
     assert c.cash == pytest.approx(cash - 3 * 120.0)
@@ -150,7 +150,7 @@ def test_plausible_monthly_profit_per_bus():
     assert all(0 <= b.condition <= 100 for b in c.buses.values())
     assert all(b.next_free % DAY >= busco.OPERATING_START for b in c.buses.values())
     trips = sum(b.trips for b in c.buses.values())
-    assert 3 * 30 * 1 < trips < 3 * 30 * 12                        # mit Lenkzeit-Grenze weniger Fahrten je Bus und Tag
+    assert 3 * 30 * 1 < trips < 3 * 30 * 12                        # fewer trips per bus and day with the driving-time limit
 
 
 def test_profit_multiplier_scales_revenue_only():
@@ -171,14 +171,14 @@ def test_auto_service_toggle():
     off.advance(40 * DAY)
     assert any("automatisch gewartet" in t for _, t in on.log)
     assert min(b.condition for b in off.buses.values()) < min(b.condition for b in on.buses.values())
-    assert any("Panne" in t for _, t in off.log)                    # ohne Wartung irgendwann Pannen
+    assert any("Panne" in t for _, t in off.log)                    # without service breakdowns happen sooner or later
 
 
 def test_manual_service():
     c = company(buses=1)
     bus = next(iter(c.buses.values()))
     with pytest.raises(CompanyError):
-        c.service_bus(bus.id)                                       # schon einwandfrei
+        c.service_bus(bus.id)                                       # already perfect
     c.advance(2 * DAY)
     assert bus.condition < 100
     cash = c.cash
@@ -193,18 +193,18 @@ def test_longer_routes_pay_less_per_km_and_never_negative_pax():
     assert bus.trips > 0 and bus.pax >= 0 and bus.revenue > 0
 
 
-# ---- Auszahlung -----------------------------------------------------------------
+# ---- Payout -----------------------------------------------------------------
 
 def test_shared_account_sync_and_written():
     c = company(cash=20_000_000)
-    c.sync_base = c.cash                 # Ausgangslage: Konto = Spielstand, nichts ausstehend
+    c.sync_base = c.cash                 # initial state: account = save game, nothing pending
     c.advance(5 * DAY)
     delta = c.firm_delta()
     assert delta != 0
-    # Abgleich mit dem Spiel: Kontostand wird übernommen, die Firmenänderung bleibt erhalten
+    # sync with the game: balance is taken over, the company change is kept
     c.sync_to_game(2_000_000)
     assert abs(c.firm_delta() - delta) < 0.01 and abs(c.cash - (2_000_000 + delta)) < 0.01
-    c.build_garage("city.b", "klein")                       # Kauf geht vom Konto ab
+    c.build_garage("city.b", "small")                       # purchase is deducted from the account
     assert abs(c.firm_delta() - (delta - 250_000)) < 0.01
     xp = c.xp_pending
     c.mark_written(c.firm_delta(), 1_234_567, xp)
@@ -222,7 +222,7 @@ def test_save_load_resume_equals_uninterrupted(tmp_path):
     a.advance(3 * DAY)
     b.advance(3 * DAY)
     assert a.to_dict() == b.to_dict()
-    a.save(path)                                                    # zweites Speichern legt .bak an
+    a.save(path)                                                    # a second save creates a .bak
     assert os.path.exists(path + ".bak")
 
 
@@ -245,7 +245,7 @@ def test_real_catalog_runs_a_year():
     cat = BusCatalog.from_doc(doc)
     assert len(cat.cities()) > 100 and len(cat.models) >= 3
     c = BusCompany(cat, 5_000_000, seed=3)
-    c.build_garage("city.berlin", "gross")
+    c.build_garage("city.berlin", "large")
     for i, (dest, km, _) in enumerate(cat.destinations("city.berlin")[:8]):
         bus = c.buy_bus("city.berlin", cat.models[i % len(cat.models)])
         c.assign_route(bus.id, dest)
@@ -289,16 +289,16 @@ def test_settings_roundtrip_and_old_state():
     d = c.to_dict()
     again = busco.BusCompany.from_dict(d)
     assert again.settings.follow_game and again.settings.auto_payout and again.settings.reserve == 5
-    d["settings"] = {"profit_multiplier": 2.0, "auto_service": False}    # alter Stand ohne neue Felder
+    d["settings"] = {"profit_multiplier": 2.0, "auto_service": False}    # old state without new fields
     old = busco.BusCompany.from_dict(d)
     assert old.settings.reserve == 300_000 and not old.settings.follow_game
 
 
-# ---- Fahrer, Weiterbildung, Touristik, Karte ---------------------------------------
+# ---- Drivers, training, tourism, map ---------------------------------------
 
 def test_bus_without_driver_does_not_run():
     c = BusCompany(catalog(), 5_000_000, seed=7)
-    c.build_garage("city.a", "klein")
+    c.build_garage("city.a", "small")
     bus = c.buy_bus("city.a", MODEL_DD)
     c.assign_route(bus.id, "city.b")
     c.advance(5 * DAY)
@@ -319,7 +319,7 @@ def test_candidates_are_stable_and_hiring_removes_them():
     with pytest.raises(CompanyError):
         c.hire(first[0].key)
     c.advance(8 * DAY)
-    assert {x.key for x in c.candidates()}.isdisjoint({x.key for x in first})     # neue Woche, neue Bewerber
+    assert {x.key for x in c.candidates()}.isdisjoint({x.key for x in first})     # new week, new applicants
 
 
 def test_training_takes_time_then_raises_skill():
@@ -330,11 +330,11 @@ def test_training_takes_time_then_raises_skill():
     cost = c.train(driver.id, "eco")
     assert cost == busco.TRAINING_COST * (old + 1) and c.cash == cash - cost
     with pytest.raises(CompanyError):
-        c.train(driver.id, "safety")           # läuft schon eine Weiterbildung
+        c.train(driver.id, "safety")           # a training is already running
     bus = c.buses[driver.bus_id]
     trips = bus.trips
     c.advance(busco.TRAINING_DAYS * DAY - 60)
-    assert bus.trips == trips and driver.eco == old        # Bus steht, Skill noch alt
+    assert bus.trips == trips and driver.eco == old        # bus is standing, skill still old
     c.advance(DAY)
     assert driver.eco == old + 1 and driver.training is None and bus.trips > trips
 
@@ -367,7 +367,7 @@ def test_fire_and_reassign_driver():
     c = company(buses=2)
     d1, d2 = sorted(c.drivers)
     b1 = c.drivers[d1].bus_id
-    c.assign_driver(d2, b1)                    # d2 übernimmt Bus von d1
+    c.assign_driver(d2, b1)                    # d2 takes over the bus from d1
     assert c.buses[b1].driver == d2 and c.drivers[d1].bus_id is None
     c.fire(d2)
     assert c.buses[b1].driver is None and d2 not in c.drivers
@@ -378,7 +378,7 @@ def test_tourist_trip_to_sight():
     cat.routes[("city.a", "viewpoints.deberlin")] = (150, 140)
     cat.routes[("viewpoints.deberlin", "city.a")] = (150, 140)
     c = BusCompany(cat, 5_000_000, seed=7)
-    c.build_garage("city.a", "klein")
+    c.build_garage("city.a", "small")
     bus = c.buy_bus("city.a", MODEL_DD)
     c.assign_route(bus.id, "viewpoints.deberlin")
     c.assign_driver(hire(c).id, bus.id)
@@ -387,7 +387,7 @@ def test_tourist_trip_to_sight():
     assert cat.cities() == ["city.a", "city.b", "city.c", "city.d"] or "viewpoints.deberlin" not in cat.cities()
     assert cat.sights() == ["viewpoints.deberlin"]
     assert busco.city_name("viewpoints.deberlin") == "Aussicht: Berlin"
-    # Touristik braucht mehr Zeit pro Rundreise (Aufenthalt) als eine Linie gleicher Länge
+    # tourism needs more time per round trip (stay) than a line of the same length
     assert busco.estimate_daily_profit(MODEL_DD, 150, 140, tourist=True) != busco.estimate_daily_profit(MODEL_DD, 150, 140)
 
 
@@ -432,14 +432,14 @@ def test_catalog_merge_adds_sights():
     assert base.merge(other) == 0
 
 
-# ---- Eigene Routen und Verträge ---------------------------------------------------
+# ---- Own routes and contracts ---------------------------------------------------
 
 def with_contracts():
     c = company(buses=0)
     c.catalog.contracts = [
         {"stops": ["city.a", "city.c", "city.b"], "legs": [[120, 110], [180, 170]], "dep": 8 * 60},
-        {"stops": ["city.a", "city.d"], "legs": [[1100, 1000]], "dep": 6 * 60},          # zu lang (> 11 h)
-        {"stops": ["city.b", "city.c"], "legs": [[180, 170]], "dep": 9 * 60},            # keine Garage in b
+        {"stops": ["city.a", "city.d"], "legs": [[1100, 1000]], "dep": 6 * 60},          # too long (> 11 h)
+        {"stops": ["city.b", "city.c"], "legs": [[180, 170]], "dep": 9 * 60},            # no garage in b
     ]
     return c
 
@@ -455,7 +455,7 @@ def test_estimate_leg_from_coordinates():
 
 def test_custom_route_visits_all_stops_back_and_forth():
     c = company(buses=0)
-    route = c.create_route("Dreierlinie", ["city.a", "city.c", "city.b"], "linie")
+    route = c.create_route("Dreierlinie", ["city.a", "city.c", "city.b"], "line")
     bus = c.buy_bus("city.a", MODEL_DD)
     c.assign_driver(hire(c).id, bus.id)
     c.assign_custom_route(bus.id, route.id)
@@ -474,9 +474,9 @@ def test_custom_route_visits_all_stops_back_and_forth():
 def test_custom_route_with_new_legs_and_sights():
     c = company(buses=0)
     c.catalog.routes[("city.a", "viewpoints.deberlin")] = (150, 140)
-    route = c.create_route("Ausflug Berlin", ["city.a", "viewpoints.deberlin", "city.c"], "ausflug",
+    route = c.create_route("Ausflug Berlin", ["city.a", "viewpoints.deberlin", "city.c"], "excursion",
                            legs=[(150, 140), (90, 100)])
-    assert c.catalog.routes[("city.c", "viewpoints.deberlin")] == (90, 100)       # Rückrichtung ergänzt
+    assert c.catalog.routes[("city.c", "viewpoints.deberlin")] == (90, 100)       # return direction added
     bus = c.buy_bus("city.a", MODEL_DD)
     c.assign_driver(hire(c).id, bus.id)
     c.assign_custom_route(bus.id, route.id)
@@ -503,14 +503,14 @@ def test_custom_route_validation():
     r = c.create_route("Eigene", ["city.a", "city.b"])
     with pytest.raises(CompanyError):
         c.create_route("eigene", ["city.a", "city.c"])
-    c.build_garage("city.b", "klein")
+    c.build_garage("city.b", "small")
     other = c.buy_bus("city.b", MODEL_A)
     with pytest.raises(CompanyError):
-        c.assign_custom_route(other.id, r.id)                    # Route beginnt in a, Bus gehört zu b
+        c.assign_custom_route(other.id, r.id)                    # route starts in a, bus belongs to b
     bus = c.buy_bus("city.a", MODEL_A)
     c.assign_custom_route(bus.id, r.id)
     with pytest.raises(CompanyError):
-        c.delete_route(r.id)                                      # noch in Benutzung
+        c.delete_route(r.id)                                      # still in use
     c.assign_route(bus.id, "city.c")
     c.delete_route(r.id)
     assert r.id not in c.routes
@@ -523,7 +523,7 @@ def test_contract_offers_filter_by_garage_and_length():
     o = offers[0]
     assert o.total_km == 300 and o.pay_per_run == round(300 * busco.CONTRACT_RATE_PER_KM)
     assert o.period == 1 and o.runs == busco.CONTRACT_DAYS and o.dep == 480
-    assert [x.key for x in offers] == [x.key for x in c.contract_offers()]            # stabil
+    assert [x.key for x in offers] == [x.key for x in c.contract_offers()]            # stable
 
 
 def test_contract_runs_and_pays_with_bonus():
@@ -533,9 +533,9 @@ def test_contract_runs_and_pays_with_bonus():
     offer = c.contract_offers()[0]
     cash = c.cash
     contract = c.accept_contract(offer.key, bus.id)
-    assert bus.contract_id == contract.id and c.contract_offers() == []              # Angebot weg
+    assert bus.contract_id == contract.id and c.contract_offers() == []              # offer gone
     c.advance(busco.CONTRACT_DAYS * DAY + 3 * DAY)
-    assert contract.status == "abgeschlossen" and contract.done == offer.runs and contract.missed == 0
+    assert contract.status == "completed" and contract.done == offer.runs and contract.missed == 0
     assert bus.contract_id is None
     pay = offer.pay_per_run * offer.runs
     assert c.cash > cash + 0.5 * pay and contract.earned > 0
@@ -556,20 +556,20 @@ def test_contract_bus_returns_to_old_route_afterwards():
 def test_contract_rules():
     c = with_contracts()
     key = c.contract_offers()[0].key
-    c.build_garage("city.b", "klein")
+    c.build_garage("city.b", "small")
     far = c.buy_bus("city.b", MODEL_A)
     c.assign_driver(hire(c).id, far.id)
     with pytest.raises(CompanyError):
-        c.accept_contract(key, far.id)                           # falsche Garage
+        c.accept_contract(key, far.id)                           # wrong garage
     nodriver = c.buy_bus("city.a", MODEL_A)
     with pytest.raises(CompanyError):
-        c.accept_contract(key, nodriver.id)                      # kein Fahrer
+        c.accept_contract(key, nodriver.id)                      # no driver
     with pytest.raises(CompanyError):
-        c.accept_contract("0:99", nodriver.id)                   # unbekanntes Angebot
+        c.accept_contract("0:99", nodriver.id)                   # unknown offer
     c.assign_driver(hire(c).id, nodriver.id)
     c.accept_contract(key, nodriver.id)
     with pytest.raises(CompanyError):
-        c.assign_route(nodriver.id, "city.b")                    # fährt Vertrag
+        c.assign_route(nodriver.id, "city.b")                    # runs a contract
 
 
 def test_contract_missed_when_driver_in_training_and_no_bonus():
@@ -580,10 +580,10 @@ def test_contract_missed_when_driver_in_training_and_no_bonus():
     offer = c.contract_offers()[0]
     contract = c.accept_contract(offer.key, bus.id)
     c.advance(2 * DAY)
-    c.train(driver.id, "eco")                                    # 2 Tage Schulung -> verpasst Fahrten
+    c.train(driver.id, "eco")                                    # 2 days of training -> misses trips
     c.advance(busco.CONTRACT_DAYS * DAY + 3 * DAY)
     assert contract.missed >= 1 and contract.done + contract.missed == offer.runs
-    assert contract.status == "abgeschlossen"
+    assert contract.status == "completed"
     assert not any("Bonus" in t for _, t in c.log if "Vertrag" in t and "abgeschlossen" in t)
 
 
@@ -608,7 +608,7 @@ def test_cancel_contract_costs_fee_and_frees_bus():
     cash = c.cash
     fee = c.cancel_contract(contract.id)
     assert fee == round(busco.CONTRACT_CANCEL_FEE * offer.runs * offer.pay_per_run)
-    assert c.cash == cash - fee and bus.contract_id is None and contract.status == "abgebrochen"
+    assert c.cash == cash - fee and bus.contract_id is None and contract.status == "cancelled"
     with pytest.raises(CompanyError):
         c.cancel_contract(contract.id)
 
@@ -692,7 +692,7 @@ def test_tuning_changes_rates_and_reprices_running_contracts():
     base_fuel = busco.FUEL_PRICE
     c.set_tuning({"rate_per_km": 26.0, "fuel_price": 3.1, "garage_price_pct": 200})
     assert busco.FUEL_PRICE == 3.1 and busco.CONTRACT_RATE_PER_KM == pytest.approx(52.0 * busco.SIM_INCOME_FACTOR)
-    assert busco.GARAGE_SIZES["klein"]["price"] == 500_000
+    assert busco.GARAGE_SIZES["small"]["price"] == 500_000
     again = busco.BusCompany.from_dict(c.to_dict())
     assert again.settings.tuning == {"rate_per_km": 26.0, "fuel_price": 3.1, "garage_price_pct": 200.0}
     with pytest.raises(CompanyError):
@@ -716,7 +716,7 @@ def test_respect_hours_limits_daily_driving_and_income_factor():
     assert sum(b.trips for b in tight.buses.values()) < sum(b.trips for b in free.buses.values())
     full = company(buses=1)
     low = company(buses=1)
-    full.set_tuning({"sim_income_pct": 100})        # die Werte gelten modulweit: jeweils direkt vor dem Lauf setzen
+    full.set_tuning({"sim_income_pct": 100})        # the values apply module-wide: set them directly before each run
     full.advance(5 * DAY)
     low.set_tuning({"sim_income_pct": 25})
     low.advance(5 * DAY)

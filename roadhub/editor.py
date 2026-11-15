@@ -1,4 +1,4 @@
-"""Bearbeiten von Profil-Werten und Frachtaufträgen in einem geladenen Save."""
+"""Editing profile values and cargo jobs in a loaded save."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from .sii import SiiDocument, SiiError, Unit
 
 # --------------------------------------------------------------------------
-# Profil
+# Profile
 # --------------------------------------------------------------------------
 
 
@@ -36,9 +36,9 @@ PROFILE_FIELDS: list[FieldSpec] = [
 ]
 
 
-# Bus-/Coaches-Werte (Feldnamen am echten Save mit Coaches-DLC geprüft).
-# Die Maximalwerte der Bus-Skills sind nicht bekannt; 0–6 ist eine vorsichtige Annahme
-# analog zu den Truck-Skills.
+# Bus/Coaches values (field names checked against a real save with the Coaches DLC).
+# The maximum values of the bus skills are not known; 0-6 is a cautious assumption
+# analogous to the truck skills.
 BUS_FIELDS: list[FieldSpec] = [
     FieldSpec("bus_experience_points", "economy", "Bus-Erfahrungspunkte (XP)", 0, 99_999_999),
     FieldSpec("long_duty", "economy", "Skill: Lange Schichten (long_duty)", 0, 6),
@@ -53,7 +53,7 @@ ALL_FIELDS: list[FieldSpec] = PROFILE_FIELDS + BUS_FIELDS
 
 
 def read_values(doc: SiiDocument, specs: list[FieldSpec]) -> dict[str, str | None]:
-    """Aktuelle Werte; None, wenn das Feld im Save nicht gefunden wurde."""
+    """Current values; None if the field was not found in the save."""
     result: dict[str, str | None] = {}
     for spec in specs:
         unit = doc.first(spec.unit_type)
@@ -77,9 +77,9 @@ def parse_int(text: str, label: str) -> int:
 
 
 def write_profile(doc: SiiDocument, values: dict[str, int]) -> list[str]:
-    """Schreibt die übergebenen Werte. Gibt die Schlüssel zurück, die sich geändert haben."""
+    """Writes the given values. Returns the keys that changed."""
     specs = {s.key: s for s in ALL_FIELDS}
-    # erst alles prüfen, dann schreiben
+    # check everything first, then write
     for key, value in values.items():
         spec = specs.get(key)
         if spec is None:
@@ -103,7 +103,7 @@ def write_profile(doc: SiiDocument, values: dict[str, int]) -> list[str]:
 
 
 def read_bus_info(doc: SiiDocument) -> dict[str, str]:
-    """Nur lesen: Zahlen rund um den Bus-Bereich im Save."""
+    """Read only: numbers around the bus area in the save."""
     info: dict[str, str] = {}
     eco = doc.first("economy")
     if eco is not None:
@@ -129,10 +129,10 @@ def read_bus_info(doc: SiiDocument) -> dict[str, str]:
 
 
 def sync_info_file(game_path: str, doc: SiiDocument) -> str | None:
-    """Hält die Anzeige in der Ladeliste (info.sii) passend zum Save.
+    """Keeps the display in the load list (info.sii) in line with the save.
 
-    Aktualisiert Kontostand und Gesamt-XP (Truck-XP + Bus-XP, an echtem Save geprüft).
-    Gibt den Pfad zurück, wenn etwas geändert wurde, sonst None. Fügt keine neuen Felder ein.
+    Updates the balance and total XP (truck XP + bus XP, checked against a real save).
+    Returns the path if something was changed, otherwise None. Does not insert new fields.
     """
     from . import sii as _sii
 
@@ -166,7 +166,7 @@ def sync_info_file(game_path: str, doc: SiiDocument) -> str | None:
 
 
 # --------------------------------------------------------------------------
-# Frachtaufträge
+# Cargo jobs
 # --------------------------------------------------------------------------
 
 JOB_SCALAR_KEYS = [
@@ -215,7 +215,7 @@ def pretty_place(key: str) -> str:
 
 @dataclass(frozen=True)
 class CargoTemplate:
-    """Eine in sich stimmige Kombination aus Fracht und Anhänger (aus vorhandenen Aufträgen)."""
+    """A consistent combination of cargo and trailer (from existing jobs)."""
 
     cargo: str
     company_truck: str
@@ -290,18 +290,18 @@ def list_offers(doc: SiiDocument) -> list[JobOffer]:
 
 
 def list_destinations(doc: SiiDocument) -> list[str]:
-    """Alle Firmen+Stadt-Kombinationen im Save ('aria_food.berlin')."""
+    """All company+city combinations in the save ('aria_food.berlin')."""
     keys = {company_key(u.name) for u in doc.by_type.get("company", [])}
     keys.discard(None)
     return sorted(keys)  # type: ignore[arg-type]
 
 
 def list_templates(offers: list[JobOffer]) -> list[CargoTemplate]:
-    """Eindeutige Fracht/Anhänger-Kombinationen aus vorhandenen Aufträgen.
+    """Unique cargo/trailer combinations from existing jobs.
 
-    Der Zugwagen (company_truck) hängt in echten Saves von der Fracht-Klasse ab
-    (z. B. "double/…" oder "heavy/…"), deshalb wird er vom ersten passenden
-    Auftrag übernommen und nicht zur Unterscheidung benutzt.
+    In real saves the tractor (company_truck) depends on the cargo class
+    (e.g. "double/…" or "heavy/…"), so it is taken from the first matching
+    job and not used to tell combinations apart.
     """
     seen: dict[tuple[str, str, str, str], CargoTemplate] = {}
     for offer in offers:
@@ -321,7 +321,7 @@ def cargo_display_name(cargo: str) -> str:
 
 
 def known_routes(offers: list[JobOffer]) -> dict[tuple[str, str], tuple[int, int, int]]:
-    """(von, nach) -> (Entfernung km, Fährzeit, Fährpreis) aus vorhandenen Aufträgen."""
+    """(from, to) -> (distance km, ferry time, ferry price) from existing jobs."""
     routes: dict[tuple[str, str], tuple[int, int, int]] = {}
     for offer in offers:
         if offer.is_empty:
@@ -394,7 +394,7 @@ def _validate_spec(doc: SiiDocument, spec: JobSpec) -> Unit:
 
 
 def apply_job(doc: SiiDocument, spec: JobSpec) -> int:
-    """Überschreibt einen vorhandenen Auftrags-Slot. Gibt die Ablaufzeit (Spielminuten) zurück."""
+    """Overwrites an existing job slot. Returns the expiry time (game minutes)."""
     offer_unit = _validate_spec(doc, spec)
     expiration = game_time(doc) + spec.hours_valid * 60
     t = spec.template
@@ -414,7 +414,7 @@ def apply_job(doc: SiiDocument, spec: JobSpec) -> int:
         "fill_ratio": t.fill_ratio,
     }
     for key, value in writes.items():
-        # offer_unit bleibt gültig: bei Einfügen wird neu indiziert, daher jedes Mal neu holen
+        # offer_unit stays valid: inserting re-indexes, so fetch it fresh every time
         unit = doc.by_name[offer_unit.name]
         doc.set(unit, key, value)
 
@@ -423,9 +423,9 @@ def apply_job(doc: SiiDocument, spec: JobSpec) -> int:
 
 
 def _update_expiry_event(doc: SiiDocument, company_unit: str, slot: int, expiration: int) -> None:
-    """Das Spiel verwaltet das Ablaufen von Aufträgen über economy_event-Einträge.
+    """The game manages the expiry of jobs through economy_event entries.
 
-    Ohne Anpassung würde der Auftrag zur alten Zeit neu gewürfelt werden.
+    Without an adjustment the job would be re-rolled at the old time.
     """
     for event in doc.by_type.get("economy_event", []):
         link = strip_quotes(doc.get(event, "unit_link"))
@@ -442,7 +442,7 @@ def _resort_event_queue(doc: SiiDocument) -> None:
     if queue is None:
         return
     pattern = re.compile(r"^data\[(\d+)\]$")
-    entries = []  # (Index im Array, Zeilennummer, Wert)
+    entries = []  # (index in the array, line number, value)
     for line_no, key, value in doc.attrs(queue):
         m = pattern.match(key)
         if m:
@@ -455,8 +455,8 @@ def _resort_event_queue(doc: SiiDocument) -> None:
         unit = doc.by_name.get(name)
         return _safe_int(doc.get(unit, "time")) if unit else 0
 
-    ordered = sorted((v for _, _, v in entries), key=event_time)  # stabil
-    # Zeilen direkt überschreiben (kein Einfügen/Löschen, Indizes bleiben gültig)
+    ordered = sorted((v for _, _, v in entries), key=event_time)  # stable
+    # overwrite lines directly (no inserting/deleting, indices stay valid)
     for (idx, line_no, old), name in zip(entries, ordered):
         if old != name:
             doc.lines[line_no] = f" data[{idx}]: {name}"

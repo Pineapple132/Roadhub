@@ -1,4 +1,4 @@
-"""Seite „Verträge“: feste Fahrten wie die Linienaufträge in ETS2, mit Fahrplan und Bezahlung je Fahrt."""
+"""Page "Contracts": fixed trips like the line jobs in ETS2, with a timetable and pay per trip."""
 
 from __future__ import annotations
 
@@ -9,6 +9,8 @@ from . import busco
 from .busco import BusCompany, CompanyError, city_name, eur
 from .gui_company import _Page
 from .widgets import APP_TITLE, Dialog, fill_tree, make_tree
+
+STATUS_LABELS = {"running": "läuft", "completed": "abgeschlossen", "cancelled": "abgebrochen"}
 
 
 def clock(minute: int) -> str:
@@ -66,11 +68,11 @@ class ContractsPage(_Page):
                 offers.append((o.key, (o.name, o.total_km, fmt_min(o.total_minutes), clock(o.dep),
                                        "Tag" if o.period == 1 else f"{o.period} Tage", o.runs,
                                        eur(o.pay_per_run), eur(o.pay_per_run * o.runs))))
-            for ct in sorted(c.contracts.values(), key=lambda x: (x.status != "läuft", -x.id))[:25]:
+            for ct in sorted(c.contracts.values(), key=lambda x: (x.status != "running", -x.id))[:25]:
                 nxt = (c.fmt_time(ct.departures[ct.next_idx])
-                       if ct.status == "läuft" and ct.next_idx < len(ct.departures) else "–")
+                       if ct.status == "running" and ct.next_idx < len(ct.departures) else "–")
                 mine.append((str(ct.id), (ct.name, f"#{ct.bus_id}", f"{ct.done} / {len(ct.departures)}", ct.missed,
-                                          nxt, eur(ct.earned), ct.status)))
+                                          nxt, eur(ct.earned), STATUS_LABELS.get(ct.status, ct.status))))
         fill_tree(self.offers, offers)
         fill_tree(self.mine, mine)
 
@@ -98,7 +100,7 @@ class ContractsPage(_Page):
             messagebox.showinfo(APP_TITLE, "Bitte erst einen Vertrag auswählen.")
             return
         ct = c.contracts.get(int(sel[0]))
-        if ct is None or ct.status != "läuft":
+        if ct is None or ct.status != "running":
             messagebox.showinfo(APP_TITLE, "Dieser Vertrag läuft nicht mehr.")
             return
         remaining = len(ct.departures) - ct.next_idx

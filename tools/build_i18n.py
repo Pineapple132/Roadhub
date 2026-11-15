@@ -1,8 +1,8 @@
-"""Baut roadhub/i18n_data.py aus den Übersetzungstabellen (Präfix des deutschen Textes → Sprachen).
+"""Builds roadhub/i18n_data.py from the translation tables (prefix of the German text → languages).
 
-Aufruf: python tools/build_i18n.py <ordner mit tabellen>
-Jede Tabelle ist eine .py-Datei mit einer Liste E aus Tupeln (deutscher Textanfang, en, ru, tr, pl).
-Der Textanfang wird gegen die Texte im Programm aufgelöst, damit der volle Text nicht doppelt gepflegt wird."""
+Usage: python tools/build_i18n.py <folder with tables>
+Each table is a .py file with a list E of tuples (beginning of the German text, en, ru, tr, pl).
+The beginning of the text is resolved against the texts in the program so the full text does not have to be maintained twice."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Oberfläche (tkinter) für Roadhub."""
+"""User interface (tkinter) for Roadhub."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ class App(tk.Tk):
         self.tour: tour.Tour | None = None
         self.skip_tutorial = bool(os.environ.get("ETS2_SKIP_TUTORIAL"))
         if not self.skip_tutorial and not i18n.has_saved_language():
-            self.withdraw()                      # erster Start: zuerst die Sprache wählen
+            self.withdraw()                      # first start: choose the language first
             code = tour.choose_first_language(self)
             if code:
                 i18n.save_language(code)
@@ -47,7 +47,7 @@ class App(tk.Tk):
         self.path: str | None = None
         self.jobs_dirty = False
         self.loaded_profile: dict[str, str | None] = {}
-        self.profile_vars: dict[str, tk.StringVar] = {}   # alle Felder (Profil + Bus)
+        self.profile_vars: dict[str, tk.StringVar] = {}   # all fields (profile + bus)
         self.field_widgets: dict[str, ttk.Widget] = {}
         self.save_entries: list[saves.SaveEntry] = []
         self._sort_state: tuple[str, bool] = ("", False)
@@ -61,7 +61,7 @@ class App(tk.Tk):
         self.telemetry = telemetry.TelemetryClient()
         self.tracker = telemetry.TripTracker()
         self.overlay: Overlay | None = None
-        self._save_stamp: tuple | None = None          # (Pfad, Änderungszeit) des neuesten Spielstands
+        self._save_stamp: tuple | None = None          # (path, modification time) of the newest save game
         self._save_pending_since = 0.0
         self.last_save_mtime = 0.0
         self._load_company()
@@ -167,7 +167,7 @@ class App(tk.Tk):
             self._nav_button(self.editor_box, key, text, "NavSub")
 
     def _update_nav(self) -> None:
-        """Ohne Firma gibt es nur die Übersicht (zum Gründen), alle anderen Firmenseiten sind ausgeblendet."""
+        """Without a company there is only the overview (for founding one), all other company pages are hidden."""
         show = self.company is not None
         self.payout_btn.pack_forget()
         if show:
@@ -195,7 +195,7 @@ class App(tk.Tk):
 
     def show_page(self, key: str) -> None:
         if self.company is None and key not in ("profile", "jobs", "bus", "buslines"):
-            key = "overview"            # ohne Firma gibt es nur die Seite zum Gründen
+            key = "overview"            # without a company there is only the page for founding one
         self.current_page = key
         self.tabs.select(self.pages[key])
         for name, btn in self.nav_buttons.items():
@@ -313,7 +313,7 @@ class App(tk.Tk):
         except OSError:
             pass
 
-    # ---- Felder -----------------------------------------------------------
+    # ---- Fields -----------------------------------------------------------
     def _add_field(self, parent, row: int, spec: editor.FieldSpec, kind: str = "entry") -> tk.StringVar:
         ttk.Label(parent, text=spec.label).grid(row=row, column=0, sticky="w", pady=5)
         var = tk.StringVar()
@@ -536,7 +536,7 @@ class App(tk.Tk):
                 self.overlay.destroy()
             self.destroy()
 
-    # ------------------------------------------------------- Save-Auswahl
+    # ------------------------------------------------------- Save selection
     def _scan_saves(self, quiet: bool = False) -> None:
         selected = self.save_entries[self.save_combo.current()].path if (
             quiet and self.save_entries and self.save_combo.current() >= 0) else None
@@ -607,7 +607,7 @@ class App(tk.Tk):
         else:
             try:
                 money = editor.read_values(doc, editor.ALL_FIELDS).get("money_account")
-                if money is not None:                    # Basis = Save, offene Firmenänderungen bleiben reserviert
+                if money is not None:                    # base = save, open company changes stay reserved
                     self.company.sync_to_game(editor.parse_int(money, "Kontostand"), os.path.getmtime(path))
                     self.company_changed()
                 added = self.company.catalog.merge(BusCatalog.from_doc(doc))
@@ -618,7 +618,7 @@ class App(tk.Tk):
                 pass
         return True
 
-    # ----------------------------------------------------------- Anzeige
+    # ----------------------------------------------------------- Display
     def _populate(self) -> None:
         assert self.doc is not None
         self.loaded_profile = editor.read_values(self.doc, editor.ALL_FIELDS)
@@ -720,7 +720,7 @@ class App(tk.Tk):
     def _update_edit_btn(self) -> None:
         self.edit_btn.config(state="normal" if self.tree.selection() else "disabled")
 
-    # ------------------------------------------------------------ Aufträge
+    # ------------------------------------------------------------ Jobs
     def _selected_offer(self) -> editor.JobOffer | None:
         sel = self.tree.selection()
         if not sel or not self.doc:
@@ -751,7 +751,7 @@ class App(tk.Tk):
         self._refresh_title()
         self._set_status("Bus-Auftrag geändert (noch nicht gespeichert).")
 
-    # ------------------------------------------------------------ Busfirma
+    # ------------------------------------------------------------ Bus company
     def _load_company(self) -> None:
         if os.path.exists(self.company_path):
             try:
@@ -791,39 +791,39 @@ class App(tk.Tk):
             self.after(TICK_MS, self._tick)
 
     GAME_POLL_MS = 3000
-    SAVE_QUIET_S = 3.0              # so lange darf sich der Save nicht mehr ändern, bevor ich ihn lese
-    RESCAN_MS = 5 * 60 * 1000       # Spielstandliste alle 5 Minuten neu einlesen
+    SAVE_QUIET_S = 3.0              # the save must not change for this long before I read it
+    RESCAN_MS = 5 * 60 * 1000       # re-read the save game list every 5 minutes
 
     def _watch_saves(self) -> None:
-        """Merkt, wenn ETS2 speichert (neuer oder geänderter Save), und lädt dann neu."""
+        """Notices when ETS2 saves (new or changed save) and then reloads."""
         try:
             entry = gamewatch.newest_save()
             stamp = (entry.path, entry.mtime) if entry else None
             if self._save_stamp is None:
-                self._save_stamp = stamp                 # Ausgangslage, kein Ereignis
+                self._save_stamp = stamp                 # initial state, no event
                 if entry:
                     self.last_save_mtime = entry.mtime
             elif stamp != self._save_stamp:
                 self._save_stamp = stamp
-                self._save_pending_since = time.time()   # Datei ändert sich noch: kurz warten
+                self._save_pending_since = time.time()   # file is still changing: wait a moment
             elif self._save_pending_since and time.time() - self._save_pending_since >= self.SAVE_QUIET_S:
                 if entry and self._process_new_save(entry):
                     self._save_pending_since = 0.0
                 elif entry is None:
                     self._save_pending_since = 0.0
-        except Exception as exc:  # noqa: BLE001 - die Überwachung darf die Oberfläche nie stören
+        except Exception as exc:  # noqa: BLE001 - the watcher must never disturb the interface
             self._set_status(f"Save-Überwachung: {exc}")
         finally:
             self.after(3000, self._watch_saves)
 
     def _process_new_save(self, entry) -> bool:
-        """Liest den Kontostand aus dem neuen Save und lädt den Editor neu, wenn dort nichts Ungespeichertes ist."""
+        """Reads the balance from the new save and reloads the editor if nothing unsaved is in it."""
         c = self.company
         if c is not None:
             try:
                 money = gamewatch.read_money(entry.path)
             except (sii.SiiError, OSError):
-                return False                              # wird noch geschrieben: nächster Versuch
+                return False                              # still being written: next attempt
             if money is not None:
                 c.sync_to_game(money, entry.mtime)
                 self.company_changed()
@@ -849,7 +849,7 @@ class App(tk.Tk):
             snap = self.telemetry.snapshot
             if not running and self.company is not None and self.company.settings.use_telemetry:
                 running = snap.connected and not snap.demo
-        except Exception:  # noqa: BLE001 - die Überwachung darf die Oberfläche nie stören
+        except Exception:  # noqa: BLE001 - the watcher must never disturb the interface
             running = self.game_running
         was, self.game_running = self.game_running, running
         if was != running:
@@ -867,7 +867,7 @@ class App(tk.Tk):
                 tc.url = c.settings.telemetry_url
             snap = tc.snapshot
             if c is not None and snap.demo and not snap.paused:
-                c.advance(9)          # Demo-Fahrt entspricht etwa 6 Spielstunden in 40 Sekunden
+                c.advance(9)          # the demo trip corresponds to about 6 game hours in 40 seconds
             events = self.tracker.update(snap) if c is not None else []
             for ev in events:
                 self._trip_event(c, ev)
@@ -877,7 +877,7 @@ class App(tk.Tk):
                 self.overlay.update_trip(snap, self.tracker, c)
             if c is not None and events:
                 self.company_changed()
-        except Exception as exc:  # noqa: BLE001 - Telemetrie darf die Oberfläche nie stören
+        except Exception as exc:  # noqa: BLE001 - telemetry must never disturb the interface
             self._set_status(f"Telemetrie: {exc}")
         finally:
             self.after(1000, self._telemetry_tick)
@@ -1023,14 +1023,14 @@ class App(tk.Tk):
         return True
 
     def account_money(self) -> int | None:
-        """Kontostand aus dem geladenen Spielstand (None = nichts geladen)."""
+        """Balance from the loaded save game (None = nothing loaded)."""
         if self.doc is None:
             return None
         value = editor.read_values(self.doc, editor.ALL_FIELDS).get("money_account")
         return None if value is None else editor.parse_int(value, "Kontostand")
 
     def sync_account(self, quiet: bool = True) -> None:
-        """Kontostand der Firma mit dem neuesten Spielstand abgleichen (Lesen ist auch bei laufendem ETS2 unbedenklich)."""
+        """Syncs the company balance with the newest save game (reading is harmless even while ETS2 is running)."""
         c = self.company
         if c is None:
             return
@@ -1114,7 +1114,7 @@ class App(tk.Tk):
             xp_var.set(old_xp)
             self.refresh_company_pages()
 
-    # ------------------------------------------------------------ Speichern
+    # ------------------------------------------------------------ Saving
     def _save(self) -> bool:
         if not self.doc or not self.path:
             return False
@@ -1275,7 +1275,7 @@ class JobDialog(tk.Toplevel):
         self.grab_set()
         self.target.focus_set()
 
-    # ---- Fracht / Anhänger ----------------------------------------------
+    # ---- Cargo / trailer ----------------------------------------------
     def _preselect_cargo(self) -> None:
         current = self.offer.template()
         key = (current.cargo, current.trailer_variant, current.trailer_definition, current.units_count)

@@ -1,4 +1,4 @@
-"""Demo-Fahrt durch die Live-Seite. Aufruf: gui_smoke_live.py <game.sii> [shot-dir]"""
+"""Demo trip through the live page. Usage: gui_smoke_live.py <game.sii> [shot-dir]"""
 import os as _os; _os.environ.setdefault("ETS2_SKIP_TUTORIAL", "1")
 import os, sys, shutil, tempfile, pathlib, time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,7 +19,7 @@ from roadhub import gui, telemetry
 app = gui.App(); app.geometry("1200x780+0+0"); app.update()
 app._scan_saves(); app._load_selected(); app.update()
 assert app._create_company(); c = app.company
-city = c.catalog.cities()[0]; c.build_garage(city, "mittel")
+city = c.catalog.cities()[0]; c.build_garage(city, "medium")
 dest = c.catalog.destinations(city)[0][0]
 bus = c.buy_bus(city, c.catalog.models[0]); c.assign_route(bus.id, dest); c.assign_driver(c.hire(c.candidates()[0].key).id, bus.id)
 app.show_page("live"); app.update()
@@ -51,7 +51,7 @@ assert lp.rep.winfo_ismapped()
 app.update(); shot("10_live_bericht")
 lp._show_live(); app.update()
 assert not app.tracker.active and app.telemetry.demo is None
-# neuer Save: Konto wird abgeglichen, Editor neu geladen
+# new save: account is synced, editor reloaded
 import pathlib as _pl
 from roadhub import sii as _sii, editor as _ed
 sav = _pl.Path(app.path)
@@ -66,7 +66,7 @@ assert int(app.profile_vars["money_account"].get()) == m0 + 12345, app.profile_v
 assert abs(app.company.sync_base - (m0 + 12345)) < 1 and app.last_save_mtime > time.time()
 assert "Letzter Save" in lp.save_lbl.cget("text") or True
 app.telemetry.stop_demo() if app.telemetry.demo else None
-# zweite Fahrt von Hand abbrechen und abliefern
+# cancel the second trip by hand and deliver
 n = len(c.trip_log)
 app.telemetry.start_demo(seconds=30.0, income=5000)
 end = time.time() + 6

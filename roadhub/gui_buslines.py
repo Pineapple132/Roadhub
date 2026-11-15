@@ -1,11 +1,11 @@
-"""Seite „Bus-Aufträge“: Linienangebote an den Haltestellen im Save bearbeiten."""
+"""Page "Bus jobs": edit the line offers at the stops in the save."""
 
 from __future__ import annotations
 
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from . import buslines, editor, mapdata, sii  # noqa: F401  (mapdata registriert die Sehenswürdigkeits-Namen)
+from . import buslines, editor, mapdata, sii  # noqa: F401  (mapdata registers the names of the sights)
 from .buslines import Leg, LineSpec, MAX_TARGETS, pretty_stop, stop_label
 from .widgets import APP_TITLE, Dialog, fill_tree, make_tree
 
@@ -77,7 +77,7 @@ class BusLinesPage(ttk.Frame):
             ),
         ).pack(fill="x")
 
-    # ---- Daten ------------------------------------------------------------
+    # ---- Data ------------------------------------------------------------
     def offers(self) -> list[buslines.LineOffer]:
         if self.app.doc is None:
             return []
@@ -206,7 +206,7 @@ class LineDialog(Dialog):
         ).grid(row=6 + MAX_TARGETS, column=0, columnspan=6, sticky="w", pady=(8, 0))
         self._summarize()
 
-    # ---- Hilfen -------------------------------------------------------------
+    # ---- Helpers -------------------------------------------------------------
     def _current_hours(self) -> int:
         if self.offer.is_empty:
             return 24

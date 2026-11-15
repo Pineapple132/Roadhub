@@ -1,4 +1,4 @@
-"""Rundgang durch alle Seiten in einer Sprache (ETS2_LANG), prüft auf Abstürze und meldet deutsche Resttexte."""
+"""Tour through all pages in one language (ETS2_LANG), checks for crashes and reports remaining German texts."""
 import os as _os; _os.environ.setdefault("ETS2_SKIP_TUTORIAL", "1")
 import os, sys, re, shutil, tempfile, pathlib
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -25,13 +25,13 @@ def shot(name):
         ImageGrab.grab(xdisplay=os.environ.get("DISPLAY")).crop((x, y, x + app.winfo_width(), y + app.winfo_height())).save(f"{shots}/{lang}_{name}.png")
 shot("00_gruenden")
 assert app._create_company(); c = app.company
-city = c.catalog.cities()[0]; c.build_garage(city, "mittel")
+city = c.catalog.cities()[0]; c.build_garage(city, "medium")
 dest = c.catalog.destinations(city)[0][0]
 bus = c.buy_bus(city, c.catalog.models[0]); c.assign_route(bus.id, dest); c.assign_driver(c.hire(c.candidates()[0].key).id, bus.id)
 c.advance(3 * 1440); app.company_changed()
 for key in ("overview", "live", "map", "garages", "buses", "drivers", "routes", "contracts", "finance", "settings", "profile", "jobs", "bus", "buslines"):
     app.show_page(key); app.update(); shot(key)
-# deutsche Resttexte sammeln
+# collect remaining German texts
 import tkinter as tk
 from tkinter import ttk
 GERMAN = re.compile(r"\b(und|der|die|das|nicht|Bitte|Fahrer|Firma|Konto|Garage|Spielstand|noch|für|wird|eine|einen|auf|mit|Stunden|Tage|Strecke|Bus)\b")

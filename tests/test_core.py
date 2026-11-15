@@ -13,7 +13,7 @@ def make_doc(eol="\r\n"):
     return sii.SiiDocument.from_bytes(make_save_text(eol).encode("utf-8"))
 
 
-# ---- Krypto ---------------------------------------------------------------
+# ---- Crypto ---------------------------------------------------------------
 
 def test_roundtrip_encrypt_decrypt():
     plain = make_save_text().encode("utf-8")
@@ -52,7 +52,7 @@ def test_wrong_size_detected():
         sii.decrypt_bytes(bytes(enc))
 
 
-# ---- Parser / Schreiben ---------------------------------------------------
+# ---- Parser / writing ---------------------------------------------------
 
 @pytest.mark.parametrize("eol", ["\r\n", "\n"])
 def test_unchanged_doc_is_byte_identical(eol):
@@ -83,7 +83,7 @@ def test_set_inserts_missing_key_and_reindexes():
     bank = doc.first("bank")
     doc.set(bank, "new_key", "7")
     assert doc.get(doc.first("bank"), "new_key") == "7"
-    # nachfolgende Units müssen weiterhin korrekt gefunden werden
+    # following units must still be found correctly
     assert doc.get(doc.first("economy"), "game_time") == "50000"
 
 
@@ -94,14 +94,14 @@ def test_save_creates_backup_and_atomic_write(tmp_path):
     editor.write_profile(doc, {"money_account": 42})
     backup = sii.save(doc, str(path))
     assert backup and os.path.exists(backup)
-    # Backup = unverändertes Original (verschlüsselt), Ergebnis = lesbarer Klartext
+    # backup = unchanged original (encrypted), result = readable plain text
     assert open(backup, "rb").read()[:4] == b"ScsC"
     assert open(path, "rb").read()[:4] == b"SiiN"
     assert editor.read_profile(sii.load(str(path)))["money_account"] == "42"
     assert not any(p.name.endswith(".tmp_write") for p in tmp_path.iterdir())
 
 
-# ---- Profil ---------------------------------------------------------------
+# ---- Profile ---------------------------------------------------------------
 
 def test_read_profile():
     p = editor.read_profile(make_doc())
@@ -138,7 +138,7 @@ def test_write_profile_validation_leaves_doc_untouched(values):
     before = doc.to_bytes()
     with pytest.raises(sii.SiiError):
         editor.write_profile(doc, {"money_account": 5, **values})
-    assert doc.to_bytes() == before  # auch das gültige Feld wurde nicht geschrieben
+    assert doc.to_bytes() == before  # the valid field was not written either
 
 
 def test_parse_int_accepts_separators_rejects_text():
@@ -155,7 +155,7 @@ def test_bus_info_readonly():
     assert info["Einträge im Bus-Auftragslog"] == "2"
 
 
-# ---- Aufträge -------------------------------------------------------------
+# ---- Jobs -------------------------------------------------------------
 
 def test_list_offers_and_helpers():
     doc = make_doc()
@@ -209,13 +209,13 @@ def test_apply_job_updates_expiry_event_and_resorts_queue():
     spec = _spec(doc)
     exp = editor.apply_job(doc, spec)
 
-    # Event für (berlin, slot 1) trägt die neue Zeit
+    # event for (berlin, slot 1) carries the new time
     ev = [e for e in doc.by_type["economy_event"]
           if editor.strip_quotes(doc.get(e, "unit_link")) == spec.company_unit
           and doc.get(e, "param") == "1"][0]
     assert doc.get(ev, "time") == str(exp)
 
-    # Queue ist aufsteigend nach Zeit sortiert und enthält alle Events genau einmal
+    # queue is sorted ascending by time and contains every event exactly once
     queue = doc.first("economy_event_queue")
     names = [v for _, v in editor._indexed_values(doc, queue, "data")]
     times = [int(doc.get(doc.by_name[n], "time")) for n in names]
@@ -228,7 +228,7 @@ def test_apply_job_updates_expiry_event_and_resorts_queue():
     "over",
     [
         {"target_key": "nowhere.mars"},
-        {"target_key": "aria_food.berlin"},   # gleiche Firma wie Start
+        {"target_key": "aria_food.berlin"},   # same company as the start
         {"distance_km": 0},
         {"urgency": 3},
         {"hours_valid": 0},
@@ -257,12 +257,12 @@ def test_apply_job_result_survives_save_and_reload(tmp_path):
     assert len(changed) == 1
 
 
-# ---- Erweiterungen nach Test mit echtem Save ------------------------------
+# ---- Extensions after testing with a real save ------------------------------
 
 def test_templates_dedupe_ignores_company_truck_and_keeps_first():
     doc = make_doc()
     offers = editor.list_offers(doc)
-    # gleicher Anhänger/Fracht, anderer Zugwagen -> nur eine Vorlage
+    # same trailer/cargo, different tractor -> only one template
     for o in offers:
         if o.cargo_name == "cheese":
             o.values["company_truck"] = "some_other_truck_" + o.offer_unit
@@ -288,7 +288,7 @@ def test_empty_slots_detected_and_fillable():
     e = empties[0]
     assert (e.company_unit, e.slot) == ("company.volatile.aria_food.berlin", 0)
     assert e.target_key == ""
-    # leere Slots liefern keine Vorlagen und keine Strecken
+    # empty slots yield no templates and no routes
     assert all(t.cargo != "null" for t in editor.list_templates(offers))
 
     tpl = editor.list_templates(offers)[0]
@@ -296,7 +296,7 @@ def test_empty_slots_detected_and_fillable():
     exp = editor.apply_job(doc, spec)
     filled = [o for o in editor.list_offers(doc) if o.offer_unit == e.offer_unit][0]
     assert not filled.is_empty and filled.values["expiration_time"] == str(exp)
-    # Event des leeren Slots wurde angepasst und Queue bleibt sortiert
+    # event of the empty slot was adjusted and the queue stays sorted
     queue = doc.first("economy_event_queue")
     names = [v for _, v in editor._indexed_values(doc, queue, "data")]
     times = [int(doc.get(doc.by_name[n], "time")) for n in names]
@@ -319,20 +319,20 @@ def test_sync_info_updates_money_and_total_xp(tmp_path):
     again = sii.load(str(info))
     unit = again.first("save_container")
     assert again.get(unit, "info_money_account") == "777"
-    assert again.get(unit, "info_players_experience") == "1250"   # 1000 + 250 Bus-XP
-    assert again.get(unit, "info_explored_ratio") == "&3ccf5f50"  # Rest unangetastet
+    assert again.get(unit, "info_players_experience") == "1250"   # 1000 + 250 bus XP
+    assert again.get(unit, "info_explored_ratio") == "&3ccf5f50"  # rest untouched
     assert any(p.name.startswith("info.sii.backup_") for p in tmp_path.iterdir())
 
 
 def test_sync_info_noop_when_unchanged_or_missing(tmp_path):
-    game, info = _write_pair(tmp_path)           # Werte entsprechen dem Save
+    game, info = _write_pair(tmp_path)           # values match the save
     doc = sii.load(str(game))
     assert editor.sync_info_file(str(game), doc) is None
     info.unlink()
     assert editor.sync_info_file(str(game), doc) is None
 
 
-# ---- Optionaler Test mit einem echten Save (nur wenn vorhanden) ------------
+# ---- Optional test with a real save (only if present) ------------------------
 
 REAL = os.environ.get("ETS2_REAL_SAVE")
 
@@ -356,7 +356,7 @@ def test_real_save_roundtrip_and_job_edit():
     assert times == sorted(times) and len(set(names)) == len(names)
 
 
-# ---- Bus-Reiter: bearbeitbare Bus-Werte -------------------------------------
+# ---- Bus tab: editable bus values -------------------------------------
 
 def test_read_bus_fields():
     v = editor.read_bus_fields(make_doc())

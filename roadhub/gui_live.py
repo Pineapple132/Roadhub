@@ -1,4 +1,4 @@
-"""Live-Fahrt: Cockpit mit der aktuellen ETS2-Fahrt links und der Firma rechts, danach der Fahrtbericht."""
+"""Live trip: cockpit with the current ETS2 trip on the left and the company on the right, then the trip report."""
 
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ class LivePage(_Page):
         self._build_report()
         self._show_live()
 
-    # ---- Aufbau ---------------------------------------------------------------
+    # ---- Layout ---------------------------------------------------------------
     def _build_live(self) -> None:
         self.live = ttk.Frame(self.stage)
         self.live.columnconfigure(0, weight=3, uniform="c")
@@ -125,7 +125,7 @@ class LivePage(_Page):
         self.rep_btn = ttk.Button(self.rep, text="Weiter", style="Accent.TButton", command=self._show_live)
         self.rep_btn.pack(anchor="e", pady=(14, 0))
 
-    # ---- Einstellungen --------------------------------------------------------
+    # ---- Settings --------------------------------------------------------
     def refresh(self) -> None:
         c = self.company
         self._loading = True
@@ -181,7 +181,7 @@ class LivePage(_Page):
         self.shell.telemetry.start_demo()
         self._show_live()
 
-    # ---- Anzeige --------------------------------------------------------------
+    # ---- Display --------------------------------------------------------------
     def _show_live(self) -> None:
         self.rep.pack_forget()
         self.live.pack(fill="both", expand=True)
@@ -274,7 +274,7 @@ class LivePage(_Page):
         self.f["buses"].set(f"{c.active_buses()} von {len(c.buses)}")
         self.f["pax"].set(busco_num(d["pax"]))
         self.f["trips"].set(str(d["trips"]))
-        active = [k for k in c.contracts.values() if k.status == "läuft"]
+        active = [k for k in c.contracts.values() if k.status == "running"]
         self.f["contract"].set(f"{len(active)} laufend" if active else "keine")
         self.f["rep"].set(f"{c.reputation * 100:.0f} %")
         self.f["share"].set("+ " + eur(tracker.income) if tracker.active else "–")

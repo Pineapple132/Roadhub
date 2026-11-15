@@ -1,4 +1,4 @@
-"""Seite „Eigene Routen“: eigene Linien und Ausflugsfahrten anlegen."""
+"""Page "Own routes": create your own lines and excursion trips."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from .busco import MAX_ROUTE_STOPS, BusCompany, CompanyError, city_name
 from .gui_company import _Page
 from .widgets import APP_TITLE, Dialog, fill_tree, make_tree
 
-KINDS = {"Linie (Städte)": "linie", "Ausflug (Sehenswürdigkeiten)": "ausflug"}
+KINDS = {"Linie (Städte)": "line", "Ausflug (Sehenswürdigkeiten)": "excursion"}
 
 
 def fmt_min(minutes: int) -> str:
@@ -54,7 +54,7 @@ class RoutesPage(_Page):
                     if leg:
                         km, mins = km + leg[0], mins + leg[1]
                 used = sum(1 for b in c.buses.values() if b.route_id == r.id)
-                rows.append((str(r.id), (r.name, "Ausflug" if r.kind == "ausflug" else "Linie",
+                rows.append((str(r.id), (r.name, "Ausflug" if r.kind == "excursion" else "Linie",
                                          " – ".join(city_name(s) for s in r.stops), km, fmt_min(mins), used)))
         fill_tree(self.tree, rows)
 

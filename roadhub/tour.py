@@ -1,5 +1,5 @@
-"""Interaktiver Rundgang: markiert Elemente der Oberfläche und erklärt sie in einer Karte daneben.
-Ein Schritt kann vorher eine Seite öffnen („before“) oder auf einen Klick des Nutzers warten („wait_page“)."""
+"""Interactive tour: highlights elements of the interface and explains them in a card next to them.
+A step can first open a page ("before") or wait for a click by the user ("wait_page")."""
 from __future__ import annotations
 
 import tkinter as tk
@@ -10,21 +10,21 @@ from typing import Callable
 from . import i18n, theme
 
 CARD_W = 370
-PAD = 5          # Abstand des Rahmens zum Element
-EDGE = 3         # Rahmendicke
+PAD = 5          # distance of the frame to the element
+EDGE = 3         # frame thickness
 
 
 @dataclass
 class Step:
     title: str
     text: str
-    target: Callable | None = None          # app -> Widget, Liste von Widgets oder None (Karte in der Mitte)
-    before: Callable | None = None          # app -> None, läuft vor dem Anzeigen
-    wait_page: str = ""                     # geht weiter, sobald der Nutzer diese Seite öffnet
+    target: Callable | None = None          # app -> widget, list of widgets or None (card in the middle)
+    before: Callable | None = None          # app -> None, runs before showing
+    wait_page: str = ""                     # continues as soon as the user opens this page
     hint: str = ""
 
 
-# --------------------------------------------------------------------- Schritte
+# --------------------------------------------------------------------- Steps
 def intro_steps() -> list[Step]:
     return [
         Step("Willkommen!",
@@ -138,7 +138,7 @@ def company_steps() -> list[Step]:
     ]
 
 
-# --------------------------------------------------------------------- Rundgang
+# --------------------------------------------------------------------- Tour
 class Tour:
     def __init__(self, app: tk.Tk, steps: list[Step], on_close: Callable[[bool], None] | None = None) -> None:
         self.app = app
@@ -156,7 +156,7 @@ class Tour:
         style.configure("TourText.TLabel", background=theme.PANEL, foreground=theme.TEXT, font=app.fonts["base"])
         style.configure("TourHint.TLabel", background=theme.PANEL, foreground=theme.ACCENT, font=app.fonts["bold"])
 
-    # ---- Aufbau ----
+    # ---- Build ----
     def start(self) -> None:
         self.active = True
         self._bind = self.app.bind("<Configure>", self._on_configure, add="+")
@@ -190,14 +190,14 @@ class Tour:
         try:
             if step.before:
                 step.before(self.app)
-        except Exception:                                       # noqa: BLE001 - ein Schritt darf den Rundgang nie sprengen
+        except Exception:                                       # noqa: BLE001 - a step must never break the tour
             pass
         self.app.update_idletasks()
         self.card = self._build_card(step, index + 1)
         self.card.place(x=0, y=0)
         self.app.update_idletasks()
         self._place()
-        self.app.after(120, self._place)                         # nach dem Seitenaufbau noch einmal
+        self.app.after(120, self._place)                         # once more after the page has been built
 
     def _clear(self) -> None:
         for fr in self._frames:
@@ -207,7 +207,7 @@ class Tour:
             self.card.destroy()
             self.card = None
 
-    # ---- Geometrie ----
+    # ---- Geometry ----
     def _target_rect(self, step: Step):
         if step.target is None:
             return None
@@ -256,10 +256,10 @@ class Tour:
                 self._frames.append(fr)
             gap = 14
             candidates = [
-                (x1 + gap, y0),                      # rechts
-                (x0, y1 + gap),                      # darunter
-                (x0 - cw - gap, y0),                 # links
-                (x0, y0 - ch - gap),                 # darüber
+                (x1 + gap, y0),                      # right
+                (x0, y1 + gap),                      # below
+                (x0 - cw - gap, y0),                 # left
+                (x0, y0 - ch - gap),                 # above
             ]
             x = y = None
             for cx, cy in candidates:
@@ -269,7 +269,7 @@ class Tour:
                 if not overlap:
                     x, y = cx, cy
                     break
-            if x is None:                            # Element ist groß: Karte unten rechts darüberlegen
+            if x is None:                            # element is large: place the card over it at the bottom right
                 x, y = W - cw - 24, H - ch - 70
         self.card.place(x=int(x), y=int(y), width=cw)
         self.card.lift()
@@ -284,7 +284,7 @@ class Tour:
             self.app.after_cancel(self._place_job)
         self._place_job = self.app.after(80, self._place)
 
-    # ---- Steuerung ----
+    # ---- Control ----
     def next(self) -> None:
         if self.index + 1 >= len(self.steps):
             self._close(True)
@@ -296,7 +296,7 @@ class Tour:
             self._show(self.index - 1)
 
     def page_shown(self, key: str) -> None:
-        """Wird von der App aufgerufen, wenn eine Seite geöffnet wurde (auch durch den Rundgang selbst)."""
+        """Called by the app when a page has been opened (also by the tour itself)."""
         if not self.active or self.index < 0:
             return
         if self.steps[self.index].wait_page == key:
@@ -319,9 +319,9 @@ class Tour:
             self.on_close(finished)
 
 
-# --------------------------------------------------------------------- erste Sprachwahl
+# --------------------------------------------------------------------- first language choice
 def choose_first_language(root: tk.Tk) -> str | None:
-    """Zeigt vor dem ersten Start die Sprachauswahl. Gibt den Sprachcode zurück (None: Fenster geschlossen)."""
+    """Shows the language selection before the first start. Returns the language code (None: window closed)."""
     result: list[str | None] = [None]
     win = tk.Toplevel(root)
     win.title("Roadhub")
