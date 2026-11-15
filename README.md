@@ -10,9 +10,6 @@ Roadhub is a Windows tool for **Euro Truck Simulator 2** (Coaches DLC) with two 
 It also reads live data from the game (speed, distance, real arrival time) and can show a small overlay.
 The interface is available in English, German, Russian, Turkish and Polish.
 
-> Roadhub was tested with synthetic test saves and a copy of a real save (Coaches DLC), but **not** against the running game.
-> Keep your own backup of your profile before the first use.
-
 ## Installation
 
 1. Install **Python 3.10 or newer** from https://www.python.org/downloads/ and tick *Add Python to PATH*.
